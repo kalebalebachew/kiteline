@@ -9,8 +9,6 @@
 	--kl-icon: #707074;
 	--kl-fill: #f5f5f4;
 	--kl-line: rgba(0, 0, 0, 0.07);
-	--kl-warn: #b45309;
-	--kl-warn-soft: rgba(245, 158, 11, 0.13);
 	--kl-add: #15803d;
 	--kl-del: #dc2626;
 }
@@ -152,11 +150,6 @@
 .kl-demo .kl-insert[data-on] {
 	max-width: 8ch;
 }
-/* Filler under the open sheet is covered; take it out so nothing reads as touching the diff. */
-.kl-demo .kl-app[data-ask] .kl-feed > .kl-prose {
-	visibility: hidden;
-	transition: visibility 0s linear 0.35s;
-}
 
 @keyframes kl-flash {
 	from {
@@ -289,24 +282,20 @@
 	width: 14px;
 	height: 14px;
 }
-.kl-demo .kl-swap {
-	display: grid;
-	width: 14px;
-	height: 14px;
+/* While its tool runs, a step's icon wears a spinning ring, as in the app's timeline. */
+@keyframes kl-spin {
+	to {
+		transform: rotate(360deg);
+	}
 }
-.kl-demo .kl-swap > svg {
-	grid-area: 1 / 1;
-	width: 14px;
-	height: 14px;
-	opacity: 0;
-	transition: opacity 0.25s ease;
-}
-.kl-demo .kl-swap > svg[data-on] {
-	opacity: 1;
-}
-.kl-demo .kl-disc[data-tone="warn"] {
-	background: var(--kl-warn-soft);
-	color: var(--kl-warn);
+.kl-demo .kl-disc[data-running]::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border: 1.5px solid transparent;
+	border-top-color: var(--ss-accent);
+	border-radius: 50%;
+	animation: kl-spin 0.8s linear infinite;
 }
 .kl-demo .kl-step__label {
 	flex: 1;
@@ -325,28 +314,11 @@
 	font-family: var(--ss-mono);
 	font-size: 13.5px;
 }
-.kl-demo .kl-review {
-	flex: none;
-	padding: 2px 8px;
-	border-radius: 999px;
-	background: var(--kl-warn-soft);
-	color: var(--kl-warn);
-	font-size: 13px;
-	font-weight: 500;
-}
 .kl-demo .kl-step__caret {
 	flex: none;
 	width: 14px;
 	height: 14px;
 	color: var(--kl-faint);
-}
-.kl-demo .kl-review,
-.kl-demo .kl-step__caret {
-	transition: opacity 0.25s ease;
-}
-.kl-demo .kl-review[data-hide],
-.kl-demo .kl-step__caret[data-hide] {
-	opacity: 0;
 }
 .kl-demo .kl-add,
 .kl-demo .kl-del {
@@ -482,6 +454,11 @@
 	font-size: 13px;
 	font-weight: 500;
 }
+/* Bypass permissions: the app tints the mode pill red, since nothing will ask first. */
+.kl-demo .kl-chip--bypass {
+	background: rgba(239, 68, 68, 0.1);
+	color: #dc2626;
+}
 .kl-demo .kl-chip svg {
 	width: 14px;
 	height: 14px;
@@ -525,147 +502,4 @@
 .kl-demo .kl-send__arrow svg {
 	width: 16px;
 	height: 16px;
-}
-
-.kl-demo .kl-backdrop {
-	position: absolute;
-	inset: 0;
-	z-index: 2;
-	background: rgba(0, 0, 0, 0.18);
-	opacity: 0;
-	transition: opacity 0.45s ease;
-}
-.kl-demo .kl-backdrop[data-show] {
-	opacity: 1;
-}
-.kl-demo .kl-sheet {
-	position: absolute;
-	right: 0;
-	bottom: 0;
-	left: 0;
-	z-index: 3;
-	will-change: transform;
-	transform: translateY(105%);
-	visibility: hidden;
-	transition:
-		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
-		visibility 0s linear 0.5s;
-}
-.kl-demo .kl-sheet[data-open] {
-	transform: translateY(0);
-	visibility: visible;
-	transition:
-		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
-		visibility 0s;
-}
-.kl-demo .kl-sheet__surface {
-	padding: 22px 20px 34px;
-	border-radius: 22px 22px 0 0;
-	background: #fff;
-	box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1);
-}
-.kl-demo .kl-sheet__handle {
-	position: absolute;
-	z-index: 1;
-	top: 8px;
-	left: calc(50% - 18px);
-	width: 36px;
-	height: 5px;
-	border-radius: 3px;
-	background: #ececeb;
-}
-.kl-demo .kl-sheet__eyebrow {
-	display: flex;
-	align-items: center;
-	height: 20px;
-	gap: 7px;
-	color: var(--kl-warn);
-	font-size: 14px;
-	font-weight: 500;
-}
-.kl-demo .kl-sheet__eyebrow svg {
-	width: 16px;
-	height: 16px;
-}
-.kl-demo .kl-sheet__title {
-	margin-top: 8px;
-	font-size: 20px;
-	font-weight: 600;
-	letter-spacing: -0.015em;
-}
-.kl-demo .kl-diff {
-	margin-top: 14px;
-	padding-bottom: 8px;
-	border-radius: 14px;
-	background: var(--kl-fill);
-	font-family: var(--ss-mono);
-	font-size: 13px;
-	line-height: 26px;
-}
-.kl-demo .kl-diff__head {
-	padding: 8px 14px 4px;
-	color: var(--kl-faint);
-	font-family: var(--ss-font);
-	font-size: 12.5px;
-}
-.kl-demo .kl-diff__line {
-	display: grid;
-	grid-template-columns: 30px 18px 1fr;
-	padding-right: 14px;
-	white-space: pre;
-}
-.kl-demo .kl-diff__n {
-	padding-right: 8px;
-	text-align: right;
-	color: var(--kl-faint);
-}
-.kl-demo .kl-diff__line[data-kind="del"] {
-	background: rgba(239, 68, 68, 0.09);
-}
-.kl-demo .kl-diff__line[data-kind="del"] .kl-diff__sign {
-	color: var(--kl-del);
-}
-.kl-demo .kl-diff__line[data-kind="add"] {
-	background: rgba(34, 197, 94, 0.11);
-}
-.kl-demo .kl-diff__line[data-kind="add"] .kl-diff__sign {
-	color: var(--kl-add);
-}
-.kl-demo .kl-sheet__actions {
-	display: flex;
-	gap: 10px;
-	margin-top: 18px;
-}
-.kl-demo .kl-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 50px;
-	border-radius: 14px;
-	font-size: 16px;
-	font-weight: 500;
-	transition:
-		transform 0.12s ease,
-		background-color 0.12s ease;
-}
-.kl-demo .kl-btn--quiet {
-	flex: 1;
-	background: var(--kl-fill);
-}
-.kl-demo .kl-btn--ink {
-	flex: 1.6;
-	will-change: transform;
-	background: var(--kl-ink);
-	color: #fff;
-}
-.kl-demo .kl-btn--ink[data-pressed] {
-	transform: scale(0.97);
-	background: #2a2a2d;
-}
-.kl-demo .kl-sheet__always {
-	margin-top: 12px;
-	text-align: center;
-	color: var(--kl-muted);
-	font-size: 14px;
-	font-weight: 500;
 }

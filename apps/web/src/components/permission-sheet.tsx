@@ -2,8 +2,16 @@ import type { PermissionDecision, PermissionRequest } from "@kiteline/api/agent/
 import { Button } from "@kiteline/ui/components/button";
 import { Sheet } from "@kiteline/ui/components/sheet";
 import { cn } from "@kiteline/ui/lib/utils";
-import { CheckIcon, ShieldWarningIcon } from "@phosphor-icons/react";
+import {
+	ArrowLeftIcon,
+	CheckIcon,
+	type Icon,
+	ShieldCheckIcon,
+	ShieldWarningIcon,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+
+import { baseName } from "@/lib/format";
 
 import { describeTool, type Tool } from "./tools/describe";
 import { ToolBody } from "./tools/tool-body";
@@ -28,13 +36,65 @@ function asTool(request: PermissionRequest): Tool {
 	return { kind: "tool", id: request.id, name: request.toolName, input: request.input, parent: null };
 }
 
+/** Who is asking, about which project, and how many more are waiting. */
+function Asker({
+	icon: ToolIcon,
+	label,
+	cwd,
+	queued,
+}: {
+	icon: Icon;
+	label: string;
+	cwd: string | null;
+	queued: number;
+}) {
+	return (
+		<div className="flex items-center gap-3">
+			<span className="bg-warning-soft text-warning inline-flex size-10 flex-none items-center justify-center rounded-xl">
+				<ToolIcon weight="fill" className="size-5" />
+			</span>
+			<span className="min-w-0 flex-1">
+				<span className="text-warning block text-[13px] leading-tight font-medium">{label}</span>
+				{cwd ? (
+					<span className="text-faint mt-0.5 block truncate text-[13px] leading-tight">
+						in {baseName(cwd)}
+					</span>
+				) : null}
+			</span>
+			{queued > 1 ? (
+				<span className="bg-surface-2 text-muted-foreground flex-none rounded-full px-2.5 py-1 text-[12px] font-medium tabular-nums">
+					1 of {queued}
+				</span>
+			) : null}
+		</div>
+	);
+}
+
+/** Sets the `backticked` parts of a sentence as code: "Don't ask again for `pnpm test` commands". */
+function WithCode({ text }: { text: string }) {
+	return text.split(/`([^`]+)`/).map((part, i) =>
+		i % 2 ? (
+			<code key={part} className="text-foreground font-mono text-[12.5px]">
+				{part}
+			</code>
+		) : (
+			part
+		),
+	);
+}
+
+/** Stands in for a button's label while its decision is on its way. */
+function Sending() {
+	return <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />;
+}
+
 const fieldClass =
 	"w-full rounded-xl bg-surface-2 px-3.5 text-[16px] outline-none placeholder:text-faint focus-visible:bg-surface-3 focus-visible:outline-none";
 
 export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDecide }: Props) {
 	const [busy, setBusy] = useState<string | null>(null);
 	const [feedback, setFeedback] = useState("");
-	const [showFeedback, setShowFeedback] = useState(false);
+	const [denying, setDenying] = useState(false);
 	const [answers, setAnswers] = useState<Record<string, string[]>>({});
 	const [other, setOther] = useState<Record<string, string>>({});
 
@@ -42,7 +102,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 	useEffect(() => {
 		setBusy(null);
 		setFeedback("");
-		setShowFeedback(false);
+		setDenying(false);
 		setAnswers({});
 		setOther({});
 	}, [request?.id]);
@@ -60,15 +120,13 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 
 	const tool = asTool(request);
 	const summary = describeTool(tool, cwd);
-	const Icon = summary.icon;
-	const counter = queued > 1 ? `1 of ${queued}` : null;
-
 	const eyebrow = (
-		<div className="text-warning flex items-center gap-2 text-[13px] font-medium">
-			<Icon weight="fill" className="size-4 flex-none" />
-			<span>{request.fromSubagent ? "A sub-agent needs you" : "Claude Code needs you"}</span>
-			{counter ? <span className="text-faint ml-auto font-normal tabular-nums">{counter}</span> : null}
-		</div>
+		<Asker
+			icon={summary.icon}
+			label={request.fromSubagent ? "A sub-agent needs you" : "Claude Code needs you"}
+			cwd={cwd}
+			queued={queued}
+		/>
 	);
 
 	if (request.toolName === "AskUserQuestion") {
@@ -91,6 +149,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 				open={open}
 				onOpenChange={onOpenChange}
 				eyebrow={eyebrow}
+				titleClassName="mt-1 text-[20px] leading-tight tracking-[-0.02em]"
 				title={questions.length > 1 ? "A few questions" : (questions[0]?.question ?? "A question")}
 				footer={
 					<div className="flex gap-2">
@@ -125,7 +184,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 								})
 							}
 						>
-							Send answer{questions.length > 1 ? "s" : ""}
+							{busy === "answer" ? <Sending /> : `Send answer${questions.length > 1 ? "s" : ""}`}
 						</Button>
 					</div>
 				}
@@ -190,65 +249,103 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 	const title = isPlan ? "Review the plan" : request.title || askFor(tool, summary.target);
 	const said = request.description || request.decisionReason || stringField(request.input.description);
 	const description = said && !title.includes(said) ? said : undefined;
-	const denyLabel = showFeedback ? (isPlan ? "Send feedback" : "Deny") : isPlan ? "Keep planning" : "Deny";
+
+	const allowFooter = (
+		<div className="space-y-2">
+			<div className="flex gap-2">
+				<Button
+					variant="secondary"
+					size="lg"
+					className="flex-1"
+					disabled={!!busy}
+					onClick={() => setDenying(true)}
+				>
+					{isPlan ? "Keep planning" : "Deny"}
+				</Button>
+				<Button
+					size="lg"
+					className="flex-[1.6]"
+					disabled={!!busy}
+					onClick={() => decide("allow", { behavior: "allow" })}
+				>
+					{busy === "allow" ? <Sending /> : isPlan ? "Approve plan" : "Allow"}
+				</Button>
+			</div>
+			{request.canAlwaysAllow && !isPlan ? (
+				<button
+					type="button"
+					disabled={!!busy}
+					onClick={() => decide("always", { behavior: "allowAlways" })}
+					className="bg-surface-2 hover:bg-surface-3 flex min-h-14 w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-[background-color,transform] duration-150 active:scale-[0.99] disabled:opacity-40"
+				>
+					<ShieldCheckIcon weight="fill" className="text-success size-[18px] flex-none" />
+					<span className="min-w-0 flex-1">
+						<span className="block text-[14px] leading-snug font-medium">Always allow</span>
+						<span className="text-muted-foreground block text-[13px] leading-snug">
+							<WithCode text={request.alwaysAllow ?? "Don't ask again for this"} />
+						</span>
+					</span>
+					{busy === "always" ? <Sending /> : null}
+				</button>
+			) : null}
+		</div>
+	);
+
+	// Saying no is its own step: room to tell Claude what to do instead, then a clear second press.
+	const denyFooter = (
+		<div className="space-y-2">
+			<textarea
+				value={feedback}
+				onChange={(e) => setFeedback(e.target.value)}
+				rows={2}
+				placeholder={isPlan ? "What should change in the plan?" : "Tell Claude what to do instead (optional)"}
+				className={cn(fieldClass, "block resize-none py-3")}
+			/>
+			<div className="flex gap-2">
+				<Button
+					variant="secondary"
+					size="lg"
+					className="flex-1"
+					disabled={!!busy}
+					onClick={() => setDenying(false)}
+				>
+					<ArrowLeftIcon weight="bold" />
+					Back
+				</Button>
+				<Button
+					variant={isPlan ? "default" : "destructive"}
+					size="lg"
+					className="flex-[1.6]"
+					disabled={!!busy}
+					onClick={() => decide("deny", { behavior: "deny", message: feedback.trim() || undefined })}
+				>
+					{busy === "deny" ? (
+						<Sending />
+					) : isPlan ? (
+						feedback.trim() ? (
+							"Send feedback"
+						) : (
+							"Keep planning"
+						)
+					) : feedback.trim() ? (
+						"Deny and send"
+					) : (
+						"Deny"
+					)}
+				</Button>
+			</div>
+		</div>
+	);
 
 	return (
 		<Sheet
 			open={open}
 			onOpenChange={onOpenChange}
 			eyebrow={eyebrow}
+			titleClassName="mt-1 text-[20px] leading-tight tracking-[-0.02em]"
 			title={title}
 			description={description}
-			footer={
-				<div className="space-y-2">
-					{showFeedback ? (
-						<textarea
-							value={feedback}
-							onChange={(e) => setFeedback(e.target.value)}
-							rows={2}
-							placeholder={
-								isPlan ? "What should change in the plan?" : "Tell Claude what to do instead (optional)"
-							}
-							className={cn(fieldClass, "block resize-none py-3")}
-						/>
-					) : null}
-					<div className="flex gap-2">
-						<Button
-							variant="secondary"
-							size="lg"
-							className="flex-1"
-							disabled={!!busy}
-							onClick={() => {
-								if (!showFeedback && !feedback) {
-									setShowFeedback(true);
-									return;
-								}
-								void decide("deny", { behavior: "deny", message: feedback || undefined });
-							}}
-						>
-							{busy === "deny" ? "…" : denyLabel}
-						</Button>
-						<Button
-							size="lg"
-							className="flex-[1.6]"
-							disabled={!!busy}
-							onClick={() => decide("allow", { behavior: "allow" })}
-						>
-							{busy === "allow" ? "…" : isPlan ? "Approve plan" : "Allow"}
-						</Button>
-					</div>
-					{request.canAlwaysAllow && !isPlan ? (
-						<button
-							type="button"
-							disabled={!!busy}
-							onClick={() => decide("always", { behavior: "allowAlways" })}
-							className="text-muted-foreground hover:text-foreground w-full py-1.5 text-center text-[13px] font-medium"
-						>
-							Allow, and don't ask again for this
-						</button>
-					) : null}
-				</div>
-			}
+			footer={denying ? denyFooter : allowFooter}
 		>
 			{request.blockedPath ? (
 				<p className="bg-warning-soft text-warning mb-3 flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px]">

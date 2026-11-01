@@ -5,12 +5,12 @@ import {
 	CpuIcon,
 	FileTextIcon,
 	FolderSimpleIcon,
-	HandIcon,
 	ImageSquareIcon,
 	MagnifyingGlassIcon,
 	NotePencilIcon,
-	ShieldWarningIcon,
+	ShieldSlashIcon,
 	StopIcon,
+	TerminalWindowIcon,
 } from "@phosphor-icons/react";
 
 import type { Act } from "../kit/act";
@@ -23,53 +23,53 @@ import "./demo.css";
 
 // Kiteline's hero: a device pair. The editor on the laptop is pinned top-left
 // and runs off the bottom; the phone straddles its right edge, cropped at the
-// top so its approval sheet and the Allow button stay whole.
+// top so the session and its composer stay whole.
 //
-// Story, about 12s: Claude Code is working (context) -> it asks to edit
-// src/auth.ts and the sheet rises on the phone -> a finger taps Allow -> the
-// line changes in the editor on the computer -> the reply streams in on the
-// phone (payoff, held). The loop fades the scene out and back to the start.
+// Story, about 11s: the session runs with full permission (Bypass), so Claude
+// Code just works. Thinking -> it reads and searches -> it edits src/auth.ts,
+// and the line changes in the editor on the computer as the step lands -> it
+// runs the tests -> the reply streams in on the phone (payoff, held). The loop
+// fades the scene out and back to the start. Every step draws as the app's
+// timeline does: its icon spins while the tool runs.
 //
-// Real strings: the request, Edit src/auth.ts, the two diff lines, Allow, the
-// code in the editor, the reply. Everything else is a line or an icon.
+// Real strings: the request, the four steps, the code in the editor, the
+// reply, the composer's mode and model. Everything else is a line or an icon.
 
 type S = {
-	thinking: boolean;
-	ask: boolean;
-	allowed: boolean;
+	/** How many tool steps have started: Read, Searched, Edited, the tests. */
+	steps: number;
+	/** The newest step's tool is still running. */
+	running: boolean;
 	applied: boolean;
 	words: number;
 	cover: boolean;
 };
 
-const START: S = { thinking: true, ask: false, allowed: false, applied: false, words: 0, cover: false };
-const REST = { wide: { x: 820, y: 330 }, compact: { x: 300, y: 300 } };
+const START: S = { steps: 0, running: false, applied: false, words: 0, cover: false };
 
 const REQUEST = "Signing in always lands on the home page. Send people back to where they were.";
-const REPLY = "Fixed. After signing in, people go back to the page they started on.";
+const REPLY = "Fixed. After signing in, people go back to the page they started on, and the auth tests pass.";
 const REPLY_WORDS = REPLY.split(" ").length;
 
-const POSTER: S = {
-	thinking: false,
-	ask: false,
-	allowed: true,
-	applied: true,
-	words: REPLY_WORDS,
-	cover: false,
-};
+const POSTER: S = { steps: 4, running: false, applied: true, words: REPLY_WORDS, cover: false };
 
 const script = async (a: Act<S>) => {
-	await a.wait(1300);
-	a.mark("ask");
-	a.put({ thinking: false, ask: true });
-	await a.wait(2100);
-	a.mark("allow");
-	await a.click("allow");
-	a.put({ ask: false, allowed: true });
-	await a.wait(550);
-	a.mark("applied");
-	a.put({ applied: true });
+	await a.wait(1100);
+	/** One tool call: its step lands spinning, runs, then settles. */
+	const tool = async (step: number, mark: string, runs: number, done: Partial<S> = {}) => {
+		a.mark(mark);
+		a.put({ steps: step, running: true });
+		await a.wait(runs);
+		a.put({ running: false, ...done });
+	};
+	await tool(1, "read", 700);
+	await a.wait(250);
+	await tool(2, "search", 650);
+	await a.wait(300);
+	await tool(3, "edit", 500, { applied: true });
 	await a.wait(900);
+	await tool(4, "test", 1400);
+	await a.wait(300);
 	a.mark("reply");
 	for (let i = 1; i <= REPLY_WORDS; i++) {
 		a.put({ words: i });
@@ -81,7 +81,6 @@ const script = async (a: Act<S>) => {
 	await a.wait(620);
 	await a.snap({ ...START, cover: true });
 	await a.snap({ cover: false });
-	await a.move(a.layout === "wide" ? REST.wide : REST.compact);
 	await a.wait(200);
 };
 
@@ -192,44 +191,51 @@ function Editor({ applied }: { applied: boolean }) {
 }
 
 /**
- * A tool step as the app's timeline draws it: icon, verb and target, then whatever sits at the
- * row's end, then a caret that opens it. A step waiting for approval shows no caret.
+ * A tool step as the app's timeline draws it: icon (spinning while the tool runs), verb and target,
+ * whatever sits at the row's end, then a caret that opens it. A command with a description shows
+ * just the description, in ink.
  */
 function Step({
 	icon,
 	verb,
 	target,
-	tone,
-	pending,
+	running,
 	children,
 }: {
 	icon: React.ReactNode;
-	verb: string;
+	verb?: string;
 	target: string;
-	tone?: "warn";
-	pending?: boolean;
+	running?: boolean;
 	children?: React.ReactNode;
 }) {
 	return (
 		<div className="kl-step">
-			<span className="kl-disc" data-tone={tone}>
+			<span className="kl-disc" data-running={running || undefined}>
 				{icon}
 			</span>
 			<span className="kl-step__label">
-				<span className="kl-step__verb">{verb}</span> <span className="kl-mono">{target}</span>
+				{verb ? (
+					<>
+						<span className="kl-step__verb">{verb}</span> <span className="kl-mono">{target}</span>
+					</>
+				) : (
+					<span className="kl-step__verb">{target}</span>
+				)}
 			</span>
 			{children}
-			<CaretRightIcon size={14} weight="bold" className="kl-step__caret" data-hide={pending || undefined} />
+			<CaretRightIcon size={14} weight="bold" className="kl-step__caret" />
 		</div>
 	);
 }
 
 function KitelineScreen({ s }: { s: S }) {
-	const editing = s.ask || s.allowed;
-	// The turn runs until the last word of the reply; until then the composer offers Stop.
-	const running = s.words < REPLY_WORDS;
+	// Working until the reply starts to stream: the Thinking line stays under the steps meanwhile.
+	const working = s.words === 0;
+	// The turn runs until the reply's last word; until then the composer offers Stop.
+	const turnRunning = s.words < REPLY_WORDS;
+	const spinning = (step: number) => s.running && s.steps === step;
 	return (
-		<div className="kl-app" data-ask={s.ask || undefined}>
+		<div className="kl-app">
 			<div className="kl-feed">
 				<div className="kl-history">
 					<div className="kl-bubble kl-bubble--filler">
@@ -256,38 +262,60 @@ function KitelineScreen({ s }: { s: S }) {
 				</div>
 				<div className="kl-bubble">{REQUEST}</div>
 
-				<div className="kl-steps">
-					<Step icon={<FileTextIcon weight="fill" />} verb="Read" target="src/auth.ts" />
-					<Step icon={<MagnifyingGlassIcon weight="bold" />} verb="Searched" target="“next”" />
-				</div>
-
-				<div className="kl-prose">
-					<Bar w={300} h={8} r={4} tone={2} />
-					<Bar w={212} h={8} r={4} tone={2} />
-				</div>
-
-				<Collapse open={editing} reveal="drop">
-					<Step
-						icon={
-							<span className="kl-swap">
-								<ShieldWarningIcon size={14} weight="fill" data-on={!s.allowed || undefined} />
-								<NotePencilIcon size={14} weight="fill" data-on={s.allowed || undefined} />
-							</span>
-						}
-						verb="Edited"
-						target="src/auth.ts"
-						tone={s.allowed ? undefined : "warn"}
-						pending={!s.allowed}
-					>
-						<span className="kl-review" data-hide={s.allowed || undefined}>
-							Review
-						</span>
-						<span className="kl-add">+1</span>
-						<span className="kl-del">−1</span>
-					</Step>
+				<Collapse open={s.steps >= 1} reveal="drop">
+					<div>
+						<div className="kl-steps">
+							<Step
+								icon={<FileTextIcon weight="fill" />}
+								verb="Read"
+								target="src/auth.ts"
+								running={spinning(1)}
+							/>
+							<Collapse open={s.steps >= 2} reveal="drop">
+								<Step
+									icon={<MagnifyingGlassIcon weight="bold" />}
+									verb="Searched"
+									target="“next”"
+									running={spinning(2)}
+								/>
+							</Collapse>
+						</div>
+					</div>
 				</Collapse>
 
-				<Collapse open={s.thinking}>
+				<Collapse open={s.steps >= 3} reveal="drop">
+					<div>
+						<div className="kl-prose">
+							<Bar w={300} h={8} r={4} tone={2} />
+							<Bar w={212} h={8} r={4} tone={2} />
+						</div>
+					</div>
+				</Collapse>
+
+				<Collapse open={s.steps >= 3} reveal="drop">
+					<div>
+						<div className="kl-steps">
+							<Step
+								icon={<NotePencilIcon weight="fill" />}
+								verb="Edited"
+								target="src/auth.ts"
+								running={spinning(3)}
+							>
+								<span className="kl-add">+1</span>
+								<span className="kl-del">−1</span>
+							</Step>
+							<Collapse open={s.steps >= 4} reveal="drop">
+								<Step
+									icon={<TerminalWindowIcon weight="fill" />}
+									target="Run the auth tests"
+									running={spinning(4)}
+								/>
+							</Collapse>
+						</div>
+					</div>
+				</Collapse>
+
+				<Collapse open={working}>
 					<div className="kl-working">
 						<KiteGlyph />
 						<span className="kl-shimmer">Thinking…</span>
@@ -308,9 +336,9 @@ function KitelineScreen({ s }: { s: S }) {
 					<span className="kl-attach">
 						<ImageSquareIcon />
 					</span>
-					<span className="kl-chip">
-						<HandIcon weight="fill" />
-						Ask
+					<span className="kl-chip kl-chip--bypass">
+						<ShieldSlashIcon weight="fill" />
+						Bypass
 						<CaretDownIcon weight="bold" className="kl-chip__caret" />
 					</span>
 					<span className="kl-chip">
@@ -319,50 +347,13 @@ function KitelineScreen({ s }: { s: S }) {
 						<CaretDownIcon weight="bold" className="kl-chip__caret" />
 					</span>
 					<span className="kl-send">
-						<span className="kl-send__stop" data-hide={!running || undefined}>
+						<span className="kl-send__stop" data-hide={!turnRunning || undefined}>
 							<StopIcon weight="fill" />
 						</span>
-						<span className="kl-send__arrow" data-hide={running || undefined}>
+						<span className="kl-send__arrow" data-hide={turnRunning || undefined}>
 							<ArrowUpIcon weight="bold" />
 						</span>
 					</span>
-				</div>
-			</div>
-
-			<div className="kl-backdrop" data-show={s.ask || undefined} />
-			<div className="kl-sheet" data-open={s.ask || undefined}>
-				<span className="kl-sheet__handle" />
-				<div className="kl-sheet__surface">
-					<div className="kl-sheet__eyebrow">
-						<NotePencilIcon weight="fill" />
-						Claude Code needs you
-					</div>
-					<div className="kl-sheet__title">Edit src/auth.ts?</div>
-					<div className="kl-diff">
-						<div className="kl-diff__head">src/auth.ts</div>
-						<div className="kl-diff__line">
-							<span className="kl-diff__n">1</span>
-							<span className="kl-diff__sign" />
-							<span>{'  const next = form.get("next")'}</span>
-						</div>
-						<div className="kl-diff__line" data-kind="del">
-							<span className="kl-diff__n">2</span>
-							<span className="kl-diff__sign">−</span>
-							<span>{'  return redirect("/")'}</span>
-						</div>
-						<div className="kl-diff__line" data-kind="add">
-							<span className="kl-diff__n">2</span>
-							<span className="kl-diff__sign">+</span>
-							<span>{'  return redirect(next ?? "/")'}</span>
-						</div>
-					</div>
-					<div className="kl-sheet__actions">
-						<span className="kl-btn kl-btn--quiet">Deny</span>
-						<span className="kl-btn kl-btn--ink" data-target="allow" data-cursor="pointer">
-							Allow
-						</span>
-					</div>
-					<div className="kl-sheet__always">Allow, and don't ask again for this</div>
 				</div>
 			</div>
 		</div>
@@ -409,7 +400,6 @@ export function KitelineDemo() {
 			initial={START}
 			poster={POSTER}
 			script={script}
-			cursor={{ at: REST, style: "touch" }}
 			className="kl-demo"
 		>
 			{(s, _rect, layout) => (

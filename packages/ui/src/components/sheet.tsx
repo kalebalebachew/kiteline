@@ -12,6 +12,8 @@ type SheetProps = {
 	children?: React.ReactNode;
 	footer?: React.ReactNode;
 	className?: string;
+	/** Replaces the title's default type, for a sheet that leads with a bigger question. */
+	titleClassName?: string;
 	/** When false, tapping outside does not close it. Swipe and Escape still do. */
 	dismissible?: boolean;
 };
@@ -26,6 +28,7 @@ export function Sheet({
 	children,
 	footer,
 	className,
+	titleClassName,
 	dismissible = true,
 }: SheetProps) {
 	return (
@@ -42,7 +45,9 @@ export function Sheet({
 						<div className="bg-surface-3 mx-auto mt-2 h-[5px] w-9 shrink-0 rounded-full" />
 						<div className="shrink-0 px-5 pt-4 pb-3">
 							{eyebrow ? <div className="mb-2">{eyebrow}</div> : null}
-							<Drawer.Title className="text-[17px] leading-snug font-semibold tracking-[-0.012em]">
+							<Drawer.Title
+								className={cn("text-[17px] leading-snug font-semibold tracking-[-0.012em]", titleClassName)}
+							>
 								{title}
 							</Drawer.Title>
 							{description ? (

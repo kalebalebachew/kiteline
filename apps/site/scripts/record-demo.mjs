@@ -13,6 +13,8 @@ import { join } from "node:path";
 const [base, out, ...rest] = process.argv.slice(2);
 const scale = Number(rest[rest.indexOf("--scale") + 1]) || 1.25;
 const FPS = 25;
+/** The mark the demo's script sets on each loop's first step. */
+const LOOP = "read";
 const frames = join(out, "frames");
 rmSync(frames, { recursive: true, force: true });
 mkdirSync(frames, { recursive: true });
@@ -75,19 +77,19 @@ const box = await evaluate(
 	"(() => { const r = document.querySelector('#demo .ss-stage').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })()",
 );
 
-// Find one loop: from the first 'ask' mark to the next one.
+// Find one loop: from the first 'read' mark (the first step of a loop) to the next one.
 const marks = [];
 for (let f = 0; f < FPS * 40; f++) {
 	marks.push(await step());
-	const asks = marks.flatMap((m, i) => (m === "ask" && marks[i - 1] !== "ask" ? [i] : []));
-	if (asks.length >= 2) break;
+	const starts = marks.flatMap((m, i) => (m === LOOP && marks[i - 1] !== LOOP ? [i] : []));
+	if (starts.length >= 2) break;
 }
-const asks = marks.flatMap((m, i) => (m === "ask" && marks[i - 1] !== "ask" ? [i] : []));
-if (asks.length < 2) throw new Error("Couldn't find a full loop");
-const period = asks[1] - asks[0];
-// The clock now stands where the second loop's sheet starts to rise, so the
-// recording opens on the approval and ends on the Thinking line that leads
-// back into it: a seamless loop that shows the point in its first second.
+const starts = marks.flatMap((m, i) => (m === LOOP && marks[i - 1] !== LOOP ? [i] : []));
+if (starts.length < 2) throw new Error("Couldn't find a full loop");
+const period = starts[1] - starts[0];
+// The clock now stands where the second loop's first step lands, so the
+// recording opens as Claude Code starts working and ends on the Thinking line
+// that leads back into it: a seamless loop.
 
 for (let f = 0; f < period; f++) {
 	const shot = await send("Page.captureScreenshot", { format: "png", clip: { ...box, scale: 1 } });

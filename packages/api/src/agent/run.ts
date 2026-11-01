@@ -10,6 +10,7 @@ import {
 	type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
+import { describeAlways } from "./always";
 import { assistantItems, trimInput, userParts } from "./normalize";
 import { AsyncQueue } from "./queue";
 import type {
@@ -213,6 +214,7 @@ export class Run {
 				decisionReason: options.decisionReason ?? null,
 				blockedPath: options.blockedPath ?? null,
 				canAlwaysAllow: !!options.suggestions?.length && !options.suppressAlwaysAllowRule,
+				alwaysAllow: describeAlways(options.suggestions),
 				defaultToNo: !!options.defaultToNo,
 				fromSubagent: !!options.agentID,
 				createdAt: Date.now(),

@@ -65,6 +65,8 @@ export type PermissionRequest = {
 	decisionReason: string | null;
 	blockedPath: string | null;
 	canAlwaysAllow: boolean;
+	/** What "always allow" covers, in words: "Don't ask again for `pnpm test` commands in this project". */
+	alwaysAllow: string | null;
 	defaultToNo: boolean;
 	fromSubagent: boolean;
 	createdAt: number;
