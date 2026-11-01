@@ -300,12 +300,7 @@ export function Docs() {
 			</div>
 
 			<footer className="footer">
-				<p>
-					MIT licensed. An independent project, not made by or affiliated with Anthropic.
-					<br />
-					Sky photo by <a href="https://www.pexels.com/photo/clouds-in-the-sky-8726326/">Nothing Ahead</a> on
-					Pexels.
-				</p>
+				<p>MIT licensed. An independent project, not made by or affiliated with Anthropic.</p>
 			</footer>
 
 			{searching ? <Search index={index} onClose={() => setSearching(false)} /> : null}

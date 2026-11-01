@@ -83,13 +83,7 @@ export function App() {
 			</main>
 
 			<footer className="footer">
-				<p>
-					MIT licensed. An independent project, not made by or affiliated with Anthropic.
-					<br />
-					The demo is built with <a href="https://benji.org/stageshow">Stageshow</a> by Benji Taylor. Sky
-					photo by <a href="https://www.pexels.com/photo/clouds-in-the-sky-8726326/">Nothing Ahead</a> on
-					Pexels.
-				</p>
+				<p>MIT licensed. An independent project, not made by or affiliated with Anthropic.</p>
 			</footer>
 			<ScrollBar />
 		</>
