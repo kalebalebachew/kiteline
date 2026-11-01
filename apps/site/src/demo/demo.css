@@ -1,0 +1,623 @@
+/* Kiteline's look on the Stageshow kit: Inter, one neutral family, one blue. */
+.kl-demo .ss-stage {
+	--ss-font: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+	--ss-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+	--ss-accent: #0a84ff;
+	--kl-ink: #18181a;
+	--kl-muted: #6e6e72;
+	--kl-faint: #9a9a9d;
+	--kl-icon: #707074;
+	--kl-fill: #f5f5f4;
+	--kl-line: rgba(0, 0, 0, 0.07);
+	--kl-warn: #b45309;
+	--kl-warn-soft: rgba(245, 158, 11, 0.13);
+	--kl-add: #15803d;
+	--kl-del: #dc2626;
+}
+
+/* Crop top and bottom only, so the devices' shadows aren't sliced at the sides. */
+.kl-demo .ss-stage {
+	overflow: visible;
+	clip-path: inset(0 -64px);
+}
+.kl-demo .kl-scene {
+	position: absolute;
+	inset: 0;
+}
+/* The loop's reset: the opening frame dissolves in over the payoff. */
+.kl-demo .kl-cover {
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.6s ease-in-out;
+}
+.kl-demo .kl-cover[data-show] {
+	opacity: 1;
+}
+
+/* The editor on the laptop: pinned top-left, off the bottom. */
+.kl-demo .kl-editor {
+	position: absolute;
+	left: 48px;
+	top: 48px;
+	width: 690px;
+	height: 700px;
+	box-shadow: var(--ss-shadow-hero);
+	/* A fade crop: the window dissolves at its foot, over filler, instead of a hard cut. */
+	-webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 92%);
+	mask-image: linear-gradient(to bottom, #000 62%, transparent 92%);
+}
+.kl-demo .kl-tree {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px 10px;
+	font-size: 13px;
+	color: var(--ss-text-strong);
+}
+.kl-demo .kl-tree__row {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	height: 28px;
+	padding: 0 8px;
+	border-radius: 7px;
+}
+.kl-demo .kl-tree__head {
+	margin-bottom: 4px;
+}
+.kl-demo .kl-tree__file {
+	padding-left: 26px;
+}
+.kl-demo .kl-tree__file[data-on] {
+	background: rgba(0, 0, 0, 0.06);
+	font-weight: 500;
+}
+.kl-demo .kl-tree__icon {
+	flex: none;
+	width: 15px;
+	height: 15px;
+	color: var(--kl-icon);
+}
+.kl-demo .kl-tree__caret {
+	flex: none;
+	width: 10px;
+	height: 10px;
+	margin-left: -14px;
+	margin-right: -3px;
+	color: var(--kl-faint);
+}
+.kl-demo .kl-faint {
+	color: #c4c4c7;
+}
+
+.kl-demo .kl-code {
+	padding-top: 8px;
+	padding-left: 8px;
+	font-family: var(--ss-mono);
+	font-size: 12.5px;
+	line-height: 22px;
+	color: #3f3f46;
+}
+.kl-demo .kl-line {
+	position: relative;
+	display: grid;
+	grid-template-columns: 46px 1fr;
+	white-space: pre;
+}
+.kl-demo .kl-line[data-changed] {
+	animation: kl-flash 2.6s ease-out;
+}
+.kl-demo .kl-gutter {
+	position: relative;
+	padding-right: 16px;
+	text-align: right;
+	color: #b4b4b8;
+}
+.kl-demo .kl-mark {
+	position: absolute;
+	top: 3px;
+	right: 5px;
+	bottom: 3px;
+	width: 3px;
+	border-radius: 2px;
+	background: #22c55e;
+	transform: scaleY(0);
+	transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) 0.2s;
+}
+.kl-demo .kl-line[data-changed] .kl-mark {
+	transform: scaleY(1);
+}
+.kl-demo .kl-kw {
+	color: #2457c5;
+}
+.kl-demo .kl-fn {
+	color: #9a4a0a;
+}
+.kl-demo .kl-str {
+	color: #0b7a55;
+}
+.kl-demo .kl-arg,
+.kl-demo .kl-arg * {
+	color: #3f3f46;
+	white-space: pre;
+}
+/* Filler under the open sheet is covered; take it out so nothing reads as touching the diff. */
+.kl-demo .kl-app[data-ask] .kl-feed > .kl-prose {
+	visibility: hidden;
+	transition: visibility 0s linear 0.35s;
+}
+
+@keyframes kl-flash {
+	from {
+		background: rgba(34, 197, 94, 0.16);
+	}
+	to {
+		background: rgba(34, 197, 94, 0);
+	}
+}
+
+/* The phone: straddles the editor's right edge, cropped at the top so the
+   approval sheet and its Allow button stay whole. */
+.kl-demo .kl-phone {
+	position: absolute;
+	left: 572px;
+	top: -103px;
+}
+.kl-demo .kl-scene[data-layout="compact"] .kl-phone {
+	left: 16px;
+	top: -90px;
+}
+
+/* Kiteline's session screen, in true points. */
+.kl-demo .kl-app {
+	position: absolute;
+	inset: 0;
+	background: #fdfdfc;
+	color: var(--kl-ink);
+	font-family: var(--ss-font);
+	font-size: 16px;
+	letter-spacing: -0.006em;
+}
+.kl-demo .kl-feed {
+	position: absolute;
+	top: 96px;
+	right: 18px;
+	bottom: 160px;
+	left: 18px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 18px;
+	overflow: hidden;
+}
+.kl-demo .kl-history {
+	display: flex;
+	flex: none;
+	flex-direction: column;
+	gap: 18px;
+}
+.kl-demo .kl-bubble--filler {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 9px;
+	padding: 14px 16px;
+}
+.kl-demo .kl-steps.kl-steps--filler {
+	flex-direction: row;
+	align-items: center;
+	gap: 0;
+	min-height: 40px;
+}
+.kl-demo .kl-steps.kl-steps--filler::before {
+	display: none;
+}
+.kl-demo .kl-steps--filler .kl-disc {
+	margin-right: -6px;
+	box-shadow: 0 0 0 2px #fdfdfc;
+}
+.kl-demo .kl-steps--filler .ss-bar {
+	margin-left: 18px;
+}
+.kl-demo .kl-feed > .ss-collapse {
+	margin-top: -18px;
+}
+.kl-demo .kl-feed > .ss-collapse > .ss-collapse__inner > * {
+	padding-top: 18px;
+}
+.kl-demo .kl-bubble {
+	flex: none;
+	align-self: flex-end;
+	max-width: 300px;
+	padding: 11px 15px;
+	border-radius: 20px 20px 7px 20px;
+	background: var(--kl-fill);
+	font-size: 16px;
+	line-height: 1.45;
+}
+.kl-demo .kl-steps {
+	flex: none;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+}
+.kl-demo .kl-steps::before {
+	content: "";
+	position: absolute;
+	top: 20px;
+	bottom: 20px;
+	left: 12.5px;
+	width: 1px;
+	background: rgba(0, 0, 0, 0.12);
+}
+.kl-demo .kl-step {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 40px;
+	font-size: 15px;
+}
+.kl-demo .kl-disc {
+	position: relative;
+	z-index: 1;
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--kl-fill);
+	box-shadow: 0 0 0 4px #fdfdfc;
+	color: var(--kl-icon);
+	transition:
+		background-color 0.25s ease,
+		color 0.25s ease;
+}
+.kl-demo .kl-disc svg {
+	width: 14px;
+	height: 14px;
+}
+.kl-demo .kl-swap {
+	display: grid;
+	width: 14px;
+	height: 14px;
+}
+.kl-demo .kl-swap > svg {
+	grid-area: 1 / 1;
+	width: 14px;
+	height: 14px;
+	opacity: 0;
+	transition: opacity 0.25s ease;
+}
+.kl-demo .kl-swap > svg[data-on] {
+	opacity: 1;
+}
+.kl-demo .kl-disc[data-tone="warn"] {
+	background: var(--kl-warn-soft);
+	color: var(--kl-warn);
+}
+.kl-demo .kl-step__label {
+	min-width: 0;
+	color: var(--kl-muted);
+	white-space: nowrap;
+}
+.kl-demo .kl-step__verb {
+	color: var(--kl-ink);
+}
+.kl-demo .kl-mono {
+	font-family: var(--ss-mono);
+	font-size: 13.5px;
+}
+.kl-demo .kl-step__end {
+	display: grid;
+	margin-left: auto;
+	justify-items: end;
+}
+.kl-demo .kl-step__end > * {
+	grid-area: 1 / 1;
+	opacity: 0;
+	transition: opacity 0.25s ease;
+}
+.kl-demo .kl-step__end > [data-show] {
+	opacity: 1;
+}
+.kl-demo .kl-review {
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: var(--kl-warn-soft);
+	color: var(--kl-warn);
+	font-size: 12.5px;
+	font-weight: 500;
+}
+.kl-demo .kl-delta {
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	align-self: center;
+}
+.kl-demo .kl-add {
+	color: var(--kl-add);
+}
+.kl-demo .kl-del {
+	color: var(--kl-del);
+}
+.kl-demo .kl-prose {
+	flex: none;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 4px 0;
+}
+.kl-demo .kl-working {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.kl-demo .kl-kite {
+	flex: none;
+	width: 26px;
+	height: 26px;
+	color: var(--kl-icon);
+}
+.kl-demo .kl-kite__sway {
+	transform-box: view-box;
+	transform-origin: 27.2px 42px;
+	animation: kl-sway 3.4s ease-in-out infinite;
+}
+@keyframes kl-sway {
+	0%,
+	100% {
+		transform: rotate(-5deg);
+	}
+	50% {
+		transform: rotate(4deg) translateY(-1px);
+	}
+}
+.kl-demo .kl-shimmer {
+	background-image: linear-gradient(
+		90deg,
+		var(--kl-faint) 0%,
+		var(--kl-faint) 40%,
+		var(--kl-ink) 50%,
+		var(--kl-faint) 60%,
+		var(--kl-faint) 100%
+	);
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	font-size: 15px;
+	font-weight: 500;
+	animation: kl-shimmer 2.4s linear infinite;
+}
+@keyframes kl-shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+.kl-demo .kl-reply {
+	font-size: 16px;
+	line-height: 1.55;
+}
+
+.kl-demo .kl-composer {
+	position: absolute;
+	right: 12px;
+	bottom: 36px;
+	left: 12px;
+	height: 98px;
+	padding: 15px 16px;
+}
+/* The surface carries the shadow, so the composer reads as part of the screen. */
+.kl-demo .kl-composer__surface {
+	position: relative;
+	z-index: -1;
+	height: 98px;
+	margin: -15px -16px -98px;
+	border-radius: 24px;
+	background: #fff;
+	box-shadow:
+		0 0 0 1px rgba(0, 0, 0, 0.06),
+		0 2px 4px rgba(0, 0, 0, 0.03),
+		0 12px 32px -8px rgba(0, 0, 0, 0.14);
+}
+.kl-demo .kl-composer {
+	isolation: isolate;
+}
+.kl-demo .kl-composer__placeholder {
+	color: var(--kl-faint);
+}
+.kl-demo .kl-composer__row {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	left: 16px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.kl-demo .kl-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 32px;
+	padding: 0 10px 0 12px;
+	border-radius: 16px;
+	background: var(--kl-fill);
+	color: var(--kl-muted);
+	font-size: 13px;
+	font-weight: 500;
+}
+.kl-demo .kl-chip svg {
+	width: 14px;
+	height: 14px;
+}
+.kl-demo .kl-chip .kl-chip__caret {
+	width: 11px;
+	height: 11px;
+	opacity: 0.6;
+}
+.kl-demo .kl-send {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	margin-left: auto;
+	border-radius: 50%;
+	background: var(--kl-fill);
+	color: var(--kl-faint);
+}
+.kl-demo .kl-send svg {
+	width: 17px;
+	height: 17px;
+}
+
+.kl-demo .kl-backdrop {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	background: rgba(0, 0, 0, 0.18);
+	opacity: 0;
+	transition: opacity 0.45s ease;
+}
+.kl-demo .kl-backdrop[data-show] {
+	opacity: 1;
+}
+.kl-demo .kl-sheet {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 3;
+	will-change: transform;
+	transform: translateY(105%);
+	visibility: hidden;
+	transition:
+		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+		visibility 0s linear 0.5s;
+}
+.kl-demo .kl-sheet[data-open] {
+	transform: translateY(0);
+	visibility: visible;
+	transition:
+		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+		visibility 0s;
+}
+.kl-demo .kl-sheet__surface {
+	padding: 22px 20px 34px;
+	border-radius: 22px 22px 0 0;
+	background: #fff;
+	box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1);
+}
+.kl-demo .kl-sheet__handle {
+	position: absolute;
+	z-index: 1;
+	top: 8px;
+	left: calc(50% - 18px);
+	width: 36px;
+	height: 5px;
+	border-radius: 3px;
+	background: #ececeb;
+}
+.kl-demo .kl-sheet__eyebrow {
+	display: flex;
+	align-items: center;
+	height: 20px;
+	gap: 7px;
+	color: var(--kl-warn);
+	font-size: 14px;
+	font-weight: 500;
+}
+.kl-demo .kl-sheet__eyebrow svg {
+	width: 16px;
+	height: 16px;
+}
+.kl-demo .kl-sheet__title {
+	margin-top: 8px;
+	font-size: 20px;
+	font-weight: 600;
+	letter-spacing: -0.015em;
+}
+.kl-demo .kl-diff {
+	margin-top: 14px;
+	padding-bottom: 8px;
+	border-radius: 14px;
+	background: var(--kl-fill);
+	font-family: var(--ss-mono);
+	font-size: 13px;
+	line-height: 26px;
+}
+.kl-demo .kl-diff__head {
+	padding: 8px 14px 4px;
+	color: var(--kl-faint);
+	font-family: var(--ss-font);
+	font-size: 12.5px;
+}
+.kl-demo .kl-diff__line {
+	display: grid;
+	grid-template-columns: 30px 18px 1fr;
+	padding-right: 14px;
+	white-space: pre;
+}
+.kl-demo .kl-diff__n {
+	padding-right: 8px;
+	text-align: right;
+	color: var(--kl-faint);
+}
+.kl-demo .kl-diff__line[data-kind="del"] {
+	background: rgba(239, 68, 68, 0.09);
+}
+.kl-demo .kl-diff__line[data-kind="del"] .kl-diff__sign {
+	color: var(--kl-del);
+}
+.kl-demo .kl-diff__line[data-kind="add"] {
+	background: rgba(34, 197, 94, 0.11);
+}
+.kl-demo .kl-diff__line[data-kind="add"] .kl-diff__sign {
+	color: var(--kl-add);
+}
+.kl-demo .kl-sheet__actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 18px;
+}
+.kl-demo .kl-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 50px;
+	border-radius: 14px;
+	font-size: 16px;
+	font-weight: 500;
+	transition:
+		transform 0.12s ease,
+		background-color 0.12s ease;
+}
+.kl-demo .kl-btn--quiet {
+	flex: 1;
+	background: var(--kl-fill);
+}
+.kl-demo .kl-btn--ink {
+	flex: 1.6;
+	will-change: transform;
+	background: var(--kl-ink);
+	color: #fff;
+}
+.kl-demo .kl-btn--ink[data-pressed] {
+	transform: scale(0.97);
+	background: #2a2a2d;
+}
+.kl-demo .kl-sheet__always {
+	margin-top: 12px;
+	text-align: center;
+	color: var(--kl-muted);
+	font-size: 14px;
+	font-weight: 500;
+}

@@ -1,0 +1,25 @@
+{
+	"name": "site",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite --port 4547",
+		"build": "tsc --noEmit && vite build",
+		"preview": "vite preview --port 4547",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@fontsource-variable/geist-mono": "^5.3.0",
+		"@fontsource-variable/inter": "^5.2.8",
+		"@phosphor-icons/react": "^2.1.10",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@vitejs/plugin-react": "^6.1.2",
+		"typescript": "catalog:",
+		"vite": "^8.3.4"
+	}
+}

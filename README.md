@@ -2,7 +2,12 @@
   <img src="apps/web/public/logo.svg" width="88" alt="" />
   <h1>Kiteline</h1>
   <p><strong>Your terminal, in your pocket.</strong><br />Drive Claude Code on your computer from your phone.</p>
+  <p><a href="https://sifenfisaha.github.io/kiteline/">Website</a> · <a href="#quick-start">Quick start</a> · <a href="#keeping-it-running">Run it always</a></p>
 </div>
+
+<p align="center">
+  <img src="docs/kiteline-demo.webp" width="880" alt="Claude Code asks to edit src/auth.ts; Allow is tapped on the phone, the line changes in the editor on the computer, and the reply arrives on the phone." />
+</p>
 
 Kiteline is a small self-hosted server and a mobile-first web app. The server runs on the computer where you use Claude Code. Your phone pairs with it once, then you can browse every session, pick one up where you left off, start new ones, and approve tool calls from wherever you are.
 
@@ -136,12 +141,15 @@ pnpm check        # Biome lint and format
 pnpm check-types  # TypeScript across the workspace
 ```
 
+The landing page's demo is made with [Stageshow](https://benji.org/stageshow). `pnpm --filter site dev` serves it on :4547; with that running, `node apps/site/scripts/record-demo.mjs http://localhost:4547 out` re-records the README animation (it needs Chromium and ffmpeg).
+
 In development the QR code points at the Vite server on port 4546, which proxies `/rpc` and `/auth` to the API.
 
 ```
 apps/
   server/     Hono server: pairing, oRPC endpoint, static hosting, terminal banner
   web/        React 19 + TanStack Router PWA
+  site/       Landing page and the animated demo, built with Stageshow's kit
 packages/
   api/        oRPC routers and the agent layer
     agent/
@@ -153,7 +161,7 @@ packages/
   config/     Shared TypeScript config
 ```
 
-Built on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (TanStack Router, Hono, oRPC, Turborepo, Biome, PWA), with [Base UI](https://base-ui.com), [Shiki](https://shiki.style), [Motion](https://motion.dev) and [lucide](https://lucide.dev).
+Built on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (TanStack Router, Hono, oRPC, Turborepo, Biome, PWA), with [Base UI](https://base-ui.com), [Shiki](https://shiki.style), [Phosphor](https://phosphoricons.com) icons and [Inter](https://rsms.me/inter/). The design follows the craft rules of [Stageshow](https://benji.org/stageshow), whose kit draws the demo.
 
 ## Status
 

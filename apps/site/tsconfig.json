@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"jsx": "react-jsx",
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"isolatedModules": true,
+		"types": ["vite/client"],
+		"lib": ["ES2023", "DOM", "DOM.Iterable"]
+	},
+	"include": ["src"],
+	"exclude": [
+		"src/kit/index.ts",
+		"src/kit/parts",
+		"src/kit/controls",
+		"src/kit/code.tsx",
+		"src/kit/chart.tsx"
+	]
+}

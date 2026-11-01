@@ -27,7 +27,6 @@
 		"@tanstack/react-router": "^1.170.44",
 		"@varlock/vite-integration": "1.5.4",
 		"diff": "^9.0.0",
-		"motion": "^14.9.0",
 		"react": "^19.3.0",
 		"react-dom": "^19.3.0",
 		"react-markdown": "^10.1.0",
