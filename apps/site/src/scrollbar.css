@@ -1,0 +1,70 @@
+/* The browser's scrollbar steps aside only once the floating one is running. */
+html.custom-scrollbar {
+	scrollbar-width: none;
+}
+html.custom-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+.scrollbar {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 100;
+	width: 14px;
+}
+.scrollbar[data-scrollable="false"] {
+	display: none;
+}
+.scrollbar__thumb {
+	position: absolute;
+	top: 0;
+	right: 3px;
+	width: 6px;
+	border-radius: 999px;
+	background: rgba(15, 23, 42, 0.34);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+	opacity: 0.72;
+	transition:
+		width 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+		background-color 0.25s,
+		box-shadow 0.25s,
+		opacity 0.35s;
+	will-change: transform;
+}
+
+/* Awake while scrolling, under the pointer, or held. */
+.scrollbar[data-awake="true"] .scrollbar__thumb,
+.scrollbar:hover .scrollbar__thumb,
+.scrollbar[data-dragging="true"] .scrollbar__thumb {
+	opacity: 1;
+}
+.scrollbar:hover .scrollbar__thumb,
+.scrollbar[data-dragging="true"] .scrollbar__thumb {
+	width: 9px;
+}
+.scrollbar__thumb:hover {
+	background-color: rgba(15, 23, 42, 0.5);
+}
+.scrollbar[data-dragging="true"] .scrollbar__thumb {
+	background-color: rgba(15, 23, 42, 0.62);
+}
+
+/* Over the sky: frosted white with a faint navy edge. */
+.scrollbar[data-tone="light"] .scrollbar__thumb {
+	background-color: rgba(255, 255, 255, 0.5);
+	box-shadow: 0 0 0 1px rgba(1, 40, 90, 0.18);
+}
+.scrollbar[data-tone="light"] .scrollbar__thumb:hover {
+	background-color: rgba(255, 255, 255, 0.72);
+}
+.scrollbar[data-tone="light"][data-dragging="true"] .scrollbar__thumb {
+	background-color: rgba(255, 255, 255, 0.88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.scrollbar__thumb {
+		transition: none;
+	}
+}

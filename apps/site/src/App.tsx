@@ -3,6 +3,7 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { Features } from "./bento";
 import { KitelineDemo } from "./demo/KitelineDemo";
 import { Install } from "./install";
+import { ScrollBar } from "./scrollbar";
 import { Clouds, FlyingKite, Sky } from "./sky";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
@@ -90,6 +91,7 @@ export function App() {
 					Pexels.
 				</p>
 			</footer>
+			<ScrollBar />
 		</>
 	);
 }
