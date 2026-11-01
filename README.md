@@ -55,7 +55,34 @@ tailscale serve --bg 4545
 # then open https://<your-machine>.<your-tailnet>.ts.net on your phone
 ```
 
+The first time, Tailscale asks you to switch on Serve and HTTPS for your tailnet; the command prints the link. Set `KITELINE_PUBLIC_URL` to that `https://` address so the pairing QR code points there.
+
 Don't expose Kiteline's port directly to the internet.
+
+### Keeping it running
+
+On Linux, run Kiteline as a systemd user service so it starts at boot, restarts if it crashes, and keeps going after you log out. [`docs/kiteline.service`](docs/kiteline.service) is a template:
+
+```bash
+cp docs/kiteline.service ~/.config/systemd/user/
+# edit the paths, PATH and KITELINE_PUBLIC_URL in it, then:
+systemctl --user daemon-reload
+systemctl --user enable --now kiteline
+loginctl enable-linger "$USER"     # start at boot, before you log in
+journalctl --user -u kiteline -f   # logs, including the pairing QR code
+```
+
+After pulling new code, run `pnpm build` and `systemctl --user restart kiteline`. Restarting stops any running sessions; they resume when you send the next message.
+
+A laptop also has to stay awake. To keep it running with the lid closed while it's plugged in:
+
+```bash
+sudo mkdir -p /etc/systemd/logind.conf.d
+printf '[Login]\nHandleLidSwitchExternalPower=ignore\n' | sudo tee /etc/systemd/logind.conf.d/kiteline-lid.conf
+sudo systemctl kill -s HUP systemd-logind
+```
+
+On battery the lid still puts it to sleep.
 
 ## How it works
 
@@ -86,17 +113,18 @@ Kiteline uses whatever credentials Claude Code on your computer uses: your claud
 
 Everything has a default. Override with environment variables or `apps/server/.env`:
 
-| Variable                | Default       | What it does                                                                   |
-| ----------------------- | ------------- | ------------------------------------------------------------------------------ |
-| `PORT`                  | `4545`        | Port for the server and, after a build, the web app                            |
-| `HOST`                  | `0.0.0.0`     | Address to bind. Use `127.0.0.1` with `tailscale serve` to keep it off the LAN |
-| `KITELINE_TOKEN`        | generated     | Fixed pairing token instead of the stored one                                  |
-| `KITELINE_HOME`         | `~/.kiteline` | Where Kiteline keeps its token and session index                               |
-| `CLAUDE_PATH`           | bundled       | Path to a `claude` executable to use instead of the SDK's bundled one          |
-| `KITELINE_ALLOW_BYPASS` | `true`        | Whether bypass-permissions mode can be chosen from the web                     |
-| `KITELINE_MAX_SESSIONS` | `6`           | Most Claude Code processes running at once                                     |
-| `KITELINE_IDLE_MINUTES` | `20`          | Minutes before an idle session's process sleeps                                |
-| `KITELINE_DEBUG`        | unset         | Log requests and Claude Code's stderr                                          |
+| Variable                | Default       | What it does                                                                                        |
+| ----------------------- | ------------- | --------------------------------------------------------------------------------------------------- |
+| `PORT`                  | `4545`        | Port for the server and, after a build, the web app                                                 |
+| `HOST`                  | `0.0.0.0`     | Address to bind. Use `127.0.0.1` with `tailscale serve` to keep it off the LAN                      |
+| `KITELINE_PUBLIC_URL`   | unset         | The address your phone uses, e.g. your `tailscale serve` HTTPS URL. The pairing QR code points here |
+| `KITELINE_TOKEN`        | generated     | Fixed pairing token instead of the stored one                                                       |
+| `KITELINE_HOME`         | `~/.kiteline` | Where Kiteline keeps its token and session index                                                    |
+| `CLAUDE_PATH`           | bundled       | Path to a `claude` executable to use instead of the SDK's bundled one                               |
+| `KITELINE_ALLOW_BYPASS` | `true`        | Whether bypass-permissions mode can be chosen from the web                                          |
+| `KITELINE_MAX_SESSIONS` | `6`           | Most Claude Code processes running at once                                                          |
+| `KITELINE_IDLE_MINUTES` | `20`          | Minutes before an idle session's process sleeps                                                     |
+| `KITELINE_DEBUG`        | unset         | Log requests and Claude Code's stderr                                                               |
 
 ## Development
 

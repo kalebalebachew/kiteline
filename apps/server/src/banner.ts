@@ -15,10 +15,19 @@ export function reachableHosts(): string[] {
 	return hosts.sort((a, b) => rank(a) - rank(b));
 }
 
-export function buildPairing(port: number, token: string): Pairing {
-	const urls = [...reachableHosts().map((host) => `http://${host}:${port}`), `http://localhost:${port}`];
-	const base = urls[0] ?? `http://localhost:${port}`;
-	const url = `${base}/#pair=${token}`;
+/**
+ * The pairing link points at the public URL when one is set (say, the HTTPS
+ * address from `tailscale serve`), otherwise at the first LAN address.
+ */
+export function buildPairing(
+	port: number,
+	token: string,
+	options: { publicUrl?: string; loopbackOnly: boolean },
+): Pairing {
+	const publicUrl = options.publicUrl?.replace(/\/+$/, "");
+	const lan = options.loopbackOnly ? [] : reachableHosts().map((host) => `http://${host}:${port}`);
+	const urls = [...(publicUrl ? [publicUrl] : []), ...lan, `http://localhost:${port}`];
+	const url = `${urls[0]}/#pair=${token}`;
 	return { url, urls, svg: renderSVG(url, { border: 1 }) };
 }
 

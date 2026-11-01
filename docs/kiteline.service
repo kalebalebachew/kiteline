@@ -1,0 +1,28 @@
+# Kiteline as a systemd user service. Copy to ~/.config/systemd/user/,
+# adjust the marked lines, then: systemctl --user enable --now kiteline
+[Unit]
+Description=Kiteline: drive Claude Code from your phone
+Documentation=https://github.com/sifenfisaha/kiteline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Where you cloned Kiteline (%h is your home folder).
+WorkingDirectory=%h/kiteline/apps/server
+# Absolute path to Node 20 or newer: see `which node`.
+ExecStart=/usr/bin/node dist/index.mjs
+# Reachable only through `tailscale serve`, which adds HTTPS on your tailnet.
+Environment=HOST=127.0.0.1
+Environment=PORT=4545
+Environment=KITELINE_PUBLIC_URL=https://your-machine.your-tailnet.ts.net
+# Claude Code's Bash tool runs with this environment, so give it the tools
+# your shell has: copy the useful parts of `echo $PATH`.
+Environment=SHELL=/bin/bash
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Restart=always
+RestartSec=3
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

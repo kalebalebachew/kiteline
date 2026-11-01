@@ -31,7 +31,10 @@ const token = loadToken(home, {
 	rotate: process.argv.includes("--new-token"),
 });
 const secret = deviceSecret(token);
-const pairing = buildPairing(dev ? 4546 : port, token);
+const pairing = buildPairing(dev ? 4546 : port, token, {
+	publicUrl: ENV.KITELINE_PUBLIC_URL,
+	loopbackOnly: host === "127.0.0.1" || host === "localhost",
+});
 const limiter = new PairLimiter();
 
 const manager = new RunManager({
