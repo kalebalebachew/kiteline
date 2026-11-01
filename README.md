@@ -2,7 +2,7 @@
   <img src="apps/web/public/logo.svg" width="88" alt="" />
   <h1>Kiteline</h1>
   <p><strong>Your terminal, in your pocket.</strong><br />Drive Claude Code on your computer from your phone.</p>
-  <p><a href="https://sifenfisaha.github.io/kiteline/">Website</a> · <a href="#quick-start">Quick start</a> · <a href="#keeping-it-running">Run it always</a></p>
+  <p><a href="https://kiteline.seefun.dev/">Website</a> · <a href="#quick-start">Quick start</a> · <a href="#keeping-it-running">Run it always</a></p>
 </div>
 
 <p align="center">
