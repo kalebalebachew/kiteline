@@ -1,95 +1,136 @@
-# claudy
+<div align="center">
+  <img src="apps/web/public/logo.svg" width="88" alt="" />
+  <h1>Kiteline</h1>
+  <p><strong>Your terminal, in your pocket.</strong><br />Drive Claude Code on your computer from your phone.</p>
+</div>
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, ORPC, and more.
+Kiteline is a small self-hosted server and a mobile-first web app. The server runs on the computer where you use Claude Code. Your phone pairs with it once, then you can browse every session, pick one up where you left off, start new ones, and approve tool calls from wherever you are.
 
-## Features
+Claude Code does the flying, on your computer. You hold the line, from your phone. Nothing is relayed through a third party: Claude Code keeps running with your files, your settings and your login.
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Node.js** - Runtime environment
-- **Turborepo** - Optimized monorepo build system
-- **PWA** - Progressive Web App support
-- **Biome** - Linting and formatting
+## What it does
 
-## Getting Started
+- **Every session, one list.** Sessions from your terminal and from Kiteline, grouped by day, filterable by project, searchable.
+- **Resume anything.** Open a session and reply. Kiteline resumes it with the full history, exactly like `claude --resume`.
+- **Live streaming.** Replies stream in as they're written. Tool calls show as a tidy timeline: commands with their output, edits as diffs, file writes with syntax highlighting, sub-agents nested under their task.
+- **Approve from your phone.** When Claude Code asks for permission, a sheet slides up with the exact command or diff. Allow, deny with a note, or allow it for good. Questions from Claude (`AskUserQuestion`) and plan approval (`ExitPlanMode`) get their own views.
+- **Permission modes and models.** Switch between Ask, Auto-accept edits, Plan, Auto and Bypass, and between Opus, Sonnet and Haiku, mid-session.
+- **Images.** Attach screenshots or photos; they're scaled down on the phone before upload.
+- **Slash commands.** Type `/` for the commands your setup supports, including your own.
+- **Built for a phone.** Installable as a home-screen app, safe-area aware, swipeable sheets, light and dark themes. Reconnects by itself when the phone wakes up.
 
-First, install the dependencies:
+## Quick start
+
+You need Node.js 20+ and pnpm, on the computer that runs Claude Code. Claude Code must already be signed in on that machine (run `claude` once if it isn't).
 
 ```bash
+git clone https://github.com/sifenfisaha/kiteline.git && cd kiteline
 pnpm install
+pnpm build
+pnpm start
 ```
 
-Then, run the development server:
+The server prints its addresses and a QR code:
+
+```
+  ◆  Kiteline v0.1.0
+
+  Network  http://192.168.1.20:4545
+  Local    http://localhost:4545
+
+  Pair your phone: scan this code, or open the link on it.
+  ▄▄▄▄▄▄▄ ...
+```
+
+Scan the code with your phone's camera. The page opens already paired, and the pairing lasts until you reset it.
+
+### Reaching it from outside your home network
+
+Your phone and computer need to see each other. On the same Wi-Fi this just works. Everywhere else, the simplest safe option is [Tailscale](https://tailscale.com): install it on both devices and Kiteline's banner will show your tailnet address too.
+
+To install Kiteline as an app on your home screen, browsers want HTTPS. Tailscale can provide it with no certificates to manage:
 
 ```bash
-pnpm run dev
+tailscale serve --bg 4545
+# then open https://<your-machine>.<your-tailnet>.ts.net on your phone
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+Don't expose Kiteline's port directly to the internet.
 
-## UI Customization
+## How it works
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+```
+ phone (PWA)  ──HTTP + event stream──▶  Kiteline server  ──Agent SDK──▶  Claude Code  ──▶  your files
+   React app        oRPC over Hono        Node, on your        one process
+                                          computer             per live session
+```
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
+- The server uses the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) to run Claude Code. Each live session is one Claude Code process with streaming input, so follow-up messages, interrupts, mode changes and permission prompts all go to the same process.
+- Permission prompts arrive through the SDK's `canUseTool` callback. The server holds the call open, pushes the request to every paired device, and answers with your decision.
+- Session history is read from Claude Code's own transcripts in `~/.claude/projects`, so terminal sessions and Kiteline sessions are the same thing.
+- An idle session's process is stopped after 20 minutes. The next message resumes it.
 
-### Add more shared components
+## Security
 
-Run this from the project root to add more primitives to the shared UI package:
+Kiteline can run commands on your computer, so treat the pairing link like a password.
+
+- Pairing uses a random token stored in `~/.kiteline/auth.json` (mode 600). The link carries it in the URL fragment, which browsers never send to servers.
+- A paired device gets an `HttpOnly`, `SameSite=Strict` cookie derived from that token. Every API call checks it; nothing works unpaired.
+- Ten wrong codes from one address locks that address out for ten minutes.
+- `pnpm start -- --new-token` replaces the token and unpairs every device.
+- Set `KITELINE_ALLOW_BYPASS=false` to stop anyone from switching a session into bypass-permissions mode from the web.
+
+Kiteline uses whatever credentials Claude Code on your computer uses: your claude.ai login, or `ANTHROPIC_API_KEY` if it's set. Check that the way you use it fits your plan's terms.
+
+## Configuration
+
+Everything has a default. Override with environment variables or `apps/server/.env`:
+
+| Variable                | Default       | What it does                                                                   |
+| ----------------------- | ------------- | ------------------------------------------------------------------------------ |
+| `PORT`                  | `4545`        | Port for the server and, after a build, the web app                            |
+| `HOST`                  | `0.0.0.0`     | Address to bind. Use `127.0.0.1` with `tailscale serve` to keep it off the LAN |
+| `KITELINE_TOKEN`        | generated     | Fixed pairing token instead of the stored one                                  |
+| `KITELINE_HOME`         | `~/.kiteline` | Where Kiteline keeps its token and session index                               |
+| `CLAUDE_PATH`           | bundled       | Path to a `claude` executable to use instead of the SDK's bundled one          |
+| `KITELINE_ALLOW_BYPASS` | `true`        | Whether bypass-permissions mode can be chosen from the web                     |
+| `KITELINE_MAX_SESSIONS` | `6`           | Most Claude Code processes running at once                                     |
+| `KITELINE_IDLE_MINUTES` | `20`          | Minutes before an idle session's process sleeps                                |
+| `KITELINE_DEBUG`        | unset         | Log requests and Claude Code's stderr                                          |
+
+## Development
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+pnpm dev          # server on :4545 (watch mode), web on :4546 with hot reload
+pnpm check        # Biome lint and format
+pnpm check-types  # TypeScript across the workspace
 ```
 
-Import shared components like this:
-
-```tsx
-import { Button } from "@claudy/ui/components/button";
-```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `pnpm run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-## Git Hooks and Formatting
-
-- Run checks: `pnpm run check`
-
-## Project Structure
+In development the QR code points at the Vite server on port 4546, which proxies `/rpc` and `/auth` to the API.
 
 ```
-claudy/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   └── server/      # Backend API (Hono, ORPC)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
+apps/
+  server/     Hono server: pairing, oRPC endpoint, static hosting, terminal banner
+  web/        React 19 + TanStack Router PWA
+packages/
+  api/        oRPC routers and the agent layer
+    agent/
+      run.ts        one live Claude Code process: streaming, permissions, interrupts
+      manager.ts    all live runs, fan-out to devices, idle sleep
+      normalize.ts  SDK messages and transcripts → the items the app renders
+      history.ts    session lists and transcript pages
+  ui/         Design tokens (Tailwind v4), button, bottom sheet, toasts
+  config/     Shared TypeScript config
 ```
 
-## Available Scripts
+Built on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (TanStack Router, Hono, oRPC, Turborepo, Biome, PWA), with [Base UI](https://base-ui.com), [Shiki](https://shiki.style), [Motion](https://motion.dev) and [lucide](https://lucide.dev).
 
-- `pnpm run dev`: Start all applications in development mode
-- `pnpm run build`: Build all applications
-- `pnpm run dev:web`: Start only the web application
-- `pnpm run dev:server`: Start only the server
-- `pnpm run check-types`: Check TypeScript types across all apps
-- `pnpm run check`: Run Biome formatting and linting
-- `cd apps/web && pnpm run generate-pwa-assets`: Generate PWA assets
+## Status
+
+Kiteline is new. So far it has been tested on Linux, with Chromium at phone size. Reports from real iOS and Android devices, and from macOS and Windows hosts, are very welcome, as are issues and pull requests.
+
+Kiteline is an independent project. It is not made by or affiliated with Anthropic.
+
+## License
+
+[MIT](LICENSE)

@@ -1,23 +1,24 @@
 {
-  "name": "@claudy/api",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts",
-    "./*": "./src/*.ts"
-  },
-  "scripts": {
-    "build": "tsc -b",
-    "check-types": "tsc -b"
-  },
-  "dependencies": {
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/server": "catalog:",
-    "@orpc/zod": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@claudy/config": "workspace:*",
-    "typescript": "catalog:"
-  }
+	"name": "@kiteline/api",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./*": "./src/*.ts"
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b"
+	},
+	"dependencies": {
+		"@anthropic-ai/claude-agent-sdk": "^0.3.316",
+		"@orpc/client": "catalog:",
+		"@orpc/openapi": "catalog:",
+		"@orpc/server": "catalog:",
+		"@orpc/zod": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@kiteline/config": "workspace:*",
+		"typescript": "catalog:"
+	}
 }

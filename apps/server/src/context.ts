@@ -1,12 +1,14 @@
-import type { Context as ApiContext } from "@claudy/api/context";
+import type { Context as ApiContext } from "@kiteline/api/context";
 import type { Context as HonoContext } from "hono";
 
 export type CreateContextOptions = {
-  context: HonoContext;
+	context: HonoContext;
+	authed: boolean;
+	shared: Omit<ApiContext, "authed">;
 };
 
-export async function createContext(_options: CreateContextOptions): Promise<ApiContext> {
-  return {};
+export function createContext({ authed, shared }: CreateContextOptions): ApiContext {
+	return { ...shared, authed };
 }
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+export type Context = ReturnType<typeof createContext>;

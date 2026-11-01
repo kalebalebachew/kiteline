@@ -1,3 +1,3 @@
 {
-  "extends": "@claudy/config/tsconfig.base.json"
+	"extends": "@kiteline/config/tsconfig.base.json"
 }
