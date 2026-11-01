@@ -1,9 +1,9 @@
 import {
 	ArrowSquareOutIcon,
+	CaretRightIcon,
 	CheckIcon,
 	CopyIcon,
 	DeviceMobileIcon,
-	GithubLogoIcon,
 	type Icon,
 	LightningIcon,
 	ListBulletsIcon,
@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 
 import { KitelineDemo } from "./demo/KitelineDemo";
+import { FlyingKite, Sky } from "./sky";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
 
@@ -88,13 +89,13 @@ function KiteMark() {
 			<path
 				d="M27.2 42C22.5 47.5 21 50.5 17 53S11 56.5 9.5 58.5"
 				fill="none"
-				stroke="#9a9a9d"
+				stroke="rgba(255,255,255,0.55)"
 				strokeWidth="2.4"
 				strokeLinecap="round"
 			/>
 			<g transform="translate(41.5 21.5) rotate(35)">
-				<path d="M0-17 14-5 0 25-14-5Z" fill="currentColor" />
-				<path d="M0-17-14-5H0Z" fill="#fdfdfc" fillOpacity="0.18" />
+				<path d="M0-17 14-5 0 25-14-5Z" fill="#fff" />
+				<path d="M0-17-14-5H0Z" fill="#cfd8e6" />
 			</g>
 		</svg>
 	);
@@ -114,44 +115,65 @@ export function App() {
 
 	return (
 		<>
-			<header className="nav">
-				<a className="brand" href="./">
-					<KiteMark />
-					Kiteline
-				</a>
-				<a className="nav__link" href={REPO}>
-					<GithubLogoIcon weight="fill" />
-					GitHub
-				</a>
-			</header>
+			<section className="top">
+				<Sky />
+				<FlyingKite />
+
+				<header className="nav">
+					<a className="brand" href="./">
+						<span className="brand__tile">
+							<KiteMark />
+						</span>
+						Kiteline
+					</a>
+					<nav className="nav__links" aria-label="Sections">
+						<a href="#features">Features</a>
+						<a href="#install">Install</a>
+						<a href={`${REPO}#readme`}>Docs</a>
+					</nav>
+					<a className="nav__cta" href={REPO}>
+						GitHub
+					</a>
+				</header>
+
+				<div className="hero">
+					<div className="hero__lead">
+						<span className="pill">Open source · Self-hosted</span>
+						<h1>
+							Your terminal,
+							<br />
+							in your pocket.
+						</h1>
+					</div>
+					<div className="hero__side">
+						<p className="lede">
+							Kiteline runs Claude Code on your computer and puts every session on your phone. Pick up where
+							you left off, start something new, and approve each change with a tap.
+						</p>
+						<div className="actions">
+							<a className="button button--dark" href="#install">
+								Get started
+							</a>
+							<a className="button button--light" href={REPO}>
+								View on GitHub
+								<CaretRightIcon weight="bold" />
+							</a>
+						</div>
+					</div>
+				</div>
+
+				<div className="frame" aria-label="Kiteline approving an edit from a phone" role="img">
+					<div className="frame__inner">
+						<KitelineDemo />
+					</div>
+				</div>
+			</section>
 
 			<main>
-				<section className="hero">
-					<p className="eyebrow">Open source · Self-hosted · For Claude Code</p>
-					<h1>
-						Your terminal,
-						<br />
-						in your pocket.
-					</h1>
-					<p className="lede">
-						Kiteline runs Claude Code on your computer and puts every session on your phone. Pick up where you
-						left off, start something new, and approve each change with a tap.
-					</p>
-					<div className="actions">
-						<a className="button button--ink" href="#install">
-							Get started
-						</a>
-						<a className="button" href={REPO}>
-							<GithubLogoIcon weight="fill" />
-							View on GitHub
-						</a>
-					</div>
-				</section>
-
-				<section className="demo" aria-label="Kiteline approving an edit from a phone">
-					<KitelineDemo />
-				</section>
-
+				<header className="section-head" id="features">
+					<h2>Claude Code, wherever you are</h2>
+					<p>Everything you do at the terminal, from the couch, the train or the other side of the world.</p>
+				</header>
 				<section className="features">
 					{FEATURES.map(({ icon: FeatureIcon, title, body }) => (
 						<div key={title} className="feature">
