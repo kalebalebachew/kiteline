@@ -1,44 +1,12 @@
-import { ArrowSquareOutIcon, CaretRightIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { CaretRightIcon } from "@phosphor-icons/react";
 
 import { Features } from "./bento";
 import { KitelineDemo } from "./demo/KitelineDemo";
+import { Install } from "./install";
 import { KiteMark } from "./mark";
 import { FlyingKite, Sky } from "./sky";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
-
-const STEPS = [
-	{ label: "Clone it and build", code: `git clone ${REPO}.git && cd kiteline\npnpm install && pnpm build` },
-	{ label: "Start it on the computer where you use Claude Code", code: "pnpm start" },
-	{
-		label: "Scan the QR code it prints with your phone",
-		code: "pnpm pair   # shows the code again any time",
-	},
-];
-
-function CopyCode({ code }: { code: string }) {
-	const [copied, setCopied] = useState(false);
-	return (
-		<div className="code">
-			<pre>
-				<code>{code}</code>
-			</pre>
-			<button
-				type="button"
-				className="code__copy"
-				aria-label={copied ? "Copied" : "Copy"}
-				onClick={async () => {
-					await navigator.clipboard?.writeText(code.replace(/\s+#.*$/gm, ""));
-					setCopied(true);
-					setTimeout(() => setCopied(false), 1400);
-				}}
-			>
-				{copied ? <CheckIcon weight="bold" /> : <CopyIcon weight="fill" />}
-			</button>
-		</div>
-	);
-}
 
 /** `?demo` (optionally `?demo=358`) renders the demo alone, for filming. */
 export function App() {
@@ -111,30 +79,7 @@ export function App() {
 			<main>
 				<Features />
 
-				<section className="install" id="install">
-					<h2>Set it up in a few minutes</h2>
-					<p className="install__lede">
-						You need Node.js 20 or newer, pnpm, and Claude Code signed in on the computer.
-					</p>
-					<ol>
-						{STEPS.map((step, i) => (
-							<li key={step.label}>
-								<span className="install__n">{i + 1}</span>
-								<div className="install__body">
-									<p>{step.label}</p>
-									<CopyCode code={step.code} />
-								</div>
-							</li>
-						))}
-					</ol>
-					<p className="install__more">
-						Away from home, reach it through Tailscale. To keep it running for good, set it up as a background
-						service.{" "}
-						<a href={`${REPO}#keeping-it-running`}>
-							Read how <ArrowSquareOutIcon weight="bold" />
-						</a>
-					</p>
-				</section>
+				<Install />
 			</main>
 
 			<footer className="footer">

@@ -301,113 +301,19 @@ svg {
 	box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.05);
 }
 
-/* Below the horizon: the feature grid lives in bento.css. */
-.install {
-	max-width: 720px;
-	margin: 0 auto;
-	padding: 112px var(--gutter) 40px;
-}
-.install h2 {
+/* Below the horizon. Each section opens with a statement: a lead in ink, the rest in gray. */
+.statement {
+	max-width: 880px;
 	margin: 0;
-	font-size: clamp(30px, 3.6vw, 40px);
+	font-size: clamp(28px, 3.5vw, 42px);
 	font-weight: 500;
-	letter-spacing: -0.028em;
+	line-height: 1.14;
+	letter-spacing: -0.03em;
+	text-wrap: pretty;
 }
-.install__lede {
-	margin: 10px 0 0;
-	color: var(--muted);
-	font-size: 17px;
+.statement span {
+	color: #8b919c;
 }
-.install ol {
-	margin: 36px 0 0;
-	padding: 0;
-	list-style: none;
-}
-.install li {
-	display: flex;
-	gap: 16px;
-}
-.install li + li {
-	margin-top: 24px;
-}
-.install__n {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 50%;
-	background: var(--fill);
-	color: var(--muted);
-	font-size: 13px;
-	font-weight: 600;
-}
-.install__body {
-	flex: 1;
-	min-width: 0;
-}
-.install__body p {
-	margin: 2px 0 10px;
-	font-weight: 500;
-}
-.code {
-	display: flex;
-	align-items: flex-start;
-	border-radius: 12px;
-	background: #0f1218;
-	color: #e7eaf0;
-}
-/* The copy button sits beside the scrolling text, so a long line never runs under it. */
-.code pre {
-	flex: 1;
-	min-width: 0;
-	margin: 0;
-	padding: 15px 8px 15px 18px;
-	overflow-x: auto;
-	font-family: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
-	font-size: 13.5px;
-	line-height: 1.7;
-}
-.code__copy {
-	flex: none;
-	margin: 10px 10px 0 0;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border: 0;
-	border-radius: 8px;
-	background: transparent;
-	color: #8b93a1;
-	cursor: pointer;
-}
-.code__copy:hover {
-	background: rgba(255, 255, 255, 0.08);
-	color: #fff;
-}
-.code__copy svg {
-	width: 15px;
-	height: 15px;
-}
-.install__more {
-	margin: 32px 0 0;
-	color: var(--muted);
-	font-size: 15px;
-}
-.install__more a {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	color: var(--brand-text);
-	font-weight: 500;
-}
-.install__more a svg {
-	width: 13px;
-	height: 13px;
-}
-
 .footer {
 	max-width: 1080px;
 	margin: 72px auto 0;
@@ -467,9 +373,6 @@ svg {
 	}
 	.frame__inner {
 		border-radius: 15px;
-	}
-	.install {
-		padding-top: 80px;
 	}
 }
 

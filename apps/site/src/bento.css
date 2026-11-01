@@ -16,19 +16,6 @@
 	margin: 0 auto;
 	padding: 120px var(--gutter) 24px;
 }
-.statement {
-	max-width: 880px;
-	margin: 0;
-	font-size: clamp(28px, 3.5vw, 42px);
-	font-weight: 500;
-	line-height: 1.14;
-	letter-spacing: -0.03em;
-	text-wrap: pretty;
-}
-.statement span {
-	color: #8b919c;
-}
-
 .bento {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));

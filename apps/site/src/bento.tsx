@@ -12,18 +12,16 @@ import {
 	ShieldCheckIcon,
 	TerminalWindowIcon,
 } from "@phosphor-icons/react";
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useRef } from "react";
 
 import { KiteMark } from "./mark";
+import { usePlayOnce } from "./play-once";
 
 import "./bento.css";
 
-type Motion = "still" | "armed" | "play";
-
 /**
  * One tile: copy on top, a picture under it. A tile with motion plays it once, the first time it
- * scrolls into view. Without script, with reduced motion, or when it is already on screen at load,
- * it simply shows its end state.
+ * scrolls into view.
  */
 function Tile({
 	kind,
@@ -37,25 +35,7 @@ function Tile({
 	motion?: boolean;
 }) {
 	const ref = useRef<HTMLDivElement>(null);
-	const [state, setState] = useState<Motion>("still");
-
-	useEffect(() => {
-		const el = ref.current;
-		if (!motion || !el || !("IntersectionObserver" in window)) return;
-		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-		if (el.getBoundingClientRect().top < window.innerHeight) return;
-		setState("armed");
-		const io = new IntersectionObserver(
-			([entry]) => {
-				if (!entry?.isIntersecting) return;
-				setState("play");
-				io.disconnect();
-			},
-			{ threshold: 0.45 },
-		);
-		io.observe(el);
-		return () => io.disconnect();
-	}, [motion]);
+	const state = usePlayOnce(ref, motion);
 
 	return (
 		<div ref={ref} className={`tile tile--${kind}`} data-motion={state}>
