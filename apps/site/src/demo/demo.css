@@ -139,10 +139,18 @@
 .kl-demo .kl-str {
 	color: #0b7a55;
 }
-.kl-demo .kl-arg,
-.kl-demo .kl-arg * {
-	color: #3f3f46;
+/* Claude Code writes the line at once; the inserted text wipes in whole characters, so no frame
+   shows a gap waiting for it. */
+.kl-demo .kl-insert {
+	display: inline-block;
+	max-width: 0;
+	overflow: hidden;
+	vertical-align: bottom;
 	white-space: pre;
+	transition: max-width 0.24s steps(8, end) 0.05s;
+}
+.kl-demo .kl-insert[data-on] {
+	max-width: 8ch;
 }
 /* Filler under the open sheet is covered; take it out so nothing reads as touching the diff. */
 .kl-demo .kl-app[data-ask] .kl-feed > .kl-prose {
@@ -301,42 +309,50 @@
 	color: var(--kl-warn);
 }
 .kl-demo .kl-step__label {
+	flex: 1;
 	min-width: 0;
+	overflow: hidden;
 	color: var(--kl-muted);
 	white-space: nowrap;
+	text-overflow: ellipsis;
 }
 .kl-demo .kl-step__verb {
 	color: var(--kl-ink);
 }
+/* The phone lays its screen out at full size and scales it to about 0.77, so type here runs a
+   size above the app's own to stay legible at the size it is seen. */
 .kl-demo .kl-mono {
 	font-family: var(--ss-mono);
 	font-size: 13.5px;
 }
-.kl-demo .kl-step__end {
-	display: grid;
-	margin-left: auto;
-	justify-items: end;
-}
-.kl-demo .kl-step__end > * {
-	grid-area: 1 / 1;
-	opacity: 0;
-	transition: opacity 0.25s ease;
-}
-.kl-demo .kl-step__end > [data-show] {
-	opacity: 1;
-}
 .kl-demo .kl-review {
-	padding: 3px 10px;
+	flex: none;
+	padding: 2px 8px;
 	border-radius: 999px;
 	background: var(--kl-warn-soft);
 	color: var(--kl-warn);
-	font-size: 12.5px;
+	font-size: 13px;
 	font-weight: 500;
 }
-.kl-demo .kl-delta {
+.kl-demo .kl-step__caret {
+	flex: none;
+	width: 14px;
+	height: 14px;
+	color: var(--kl-faint);
+}
+.kl-demo .kl-review,
+.kl-demo .kl-step__caret {
+	transition: opacity 0.25s ease;
+}
+.kl-demo .kl-review[data-hide],
+.kl-demo .kl-step__caret[data-hide] {
+	opacity: 0;
+}
+.kl-demo .kl-add,
+.kl-demo .kl-del {
+	flex: none;
 	font-size: 13px;
 	font-variant-numeric: tabular-nums;
-	align-self: center;
 }
 .kl-demo .kl-add {
 	color: var(--kl-add);
@@ -416,10 +432,9 @@
 }
 /* The surface carries the shadow, so the composer reads as part of the screen. */
 .kl-demo .kl-composer__surface {
-	position: relative;
+	position: absolute;
+	inset: 0;
 	z-index: -1;
-	height: 98px;
-	margin: -15px -16px -98px;
 	border-radius: 24px;
 	background: #fff;
 	box-shadow:
@@ -442,6 +457,19 @@
 	align-items: center;
 	gap: 6px;
 }
+.kl-demo .kl-attach {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	color: var(--kl-icon);
+}
+.kl-demo .kl-attach svg {
+	width: 18px;
+	height: 18px;
+}
 .kl-demo .kl-chip {
 	display: inline-flex;
 	align-items: center;
@@ -463,20 +491,40 @@
 	height: 11px;
 	opacity: 0.6;
 }
+/* Stop while the turn runs; then the send button, disabled because the field is empty. */
 .kl-demo .kl-send {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	display: grid;
+	flex: none;
 	width: 36px;
 	height: 36px;
 	margin-left: auto;
+}
+.kl-demo .kl-send > span {
+	display: inline-flex;
+	grid-area: 1 / 1;
+	align-items: center;
+	justify-content: center;
 	border-radius: 50%;
+	transition: opacity 0.2s ease;
+}
+.kl-demo .kl-send > span[data-hide] {
+	opacity: 0;
+}
+.kl-demo .kl-send__stop {
+	background: var(--kl-ink);
+	color: #fff;
+}
+.kl-demo .kl-send__stop svg {
+	width: 14px;
+	height: 14px;
+}
+.kl-demo .kl-send__arrow {
 	background: var(--kl-fill);
 	color: var(--kl-faint);
 }
-.kl-demo .kl-send svg {
-	width: 17px;
-	height: 17px;
+.kl-demo .kl-send__arrow svg {
+	width: 16px;
+	height: 16px;
 }
 
 .kl-demo .kl-backdrop {

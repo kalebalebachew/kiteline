@@ -15,18 +15,18 @@ Claude Code does the flying, on your computer. You hold the line, from your phon
 
 ## What it does
 
-- **Every session, one list.** Sessions from your terminal and from Kiteline, grouped by day, filterable by project, searchable.
+- **Every session, one list.** Sessions from your terminal and from Kiteline, grouped by day, filterable by project, searchable. The 200 most recent are listed.
 - **Resume anything.** Open a session and reply. Kiteline resumes it with the full history, exactly like `claude --resume`.
 - **Live streaming.** Replies stream in as they're written. Tool calls show as a tidy timeline: commands with their output, edits as diffs, file writes with syntax highlighting, sub-agents nested under their task.
-- **Approve from your phone.** When Claude Code asks for permission, a sheet slides up with the exact command or diff. Allow, deny with a note, or allow it for good. Questions from Claude (`AskUserQuestion`) and plan approval (`ExitPlanMode`) get their own views.
+- **Approve from your phone.** When Claude Code asks for permission, a sheet slides up on the phone that has the session open, with the exact command or diff. Allow, deny with a note, or allow it for good. Questions from Claude (`AskUserQuestion`) and plan approval (`ExitPlanMode`) get their own views.
 - **Permission modes and models.** Switch between Ask, Auto-accept edits, Plan, Auto and Bypass, and between Opus, Sonnet and Haiku, mid-session.
 - **Images.** Attach screenshots or photos; they're scaled down on the phone before upload.
-- **Slash commands.** Type `/` for the commands your setup supports, including your own.
+- **Slash commands.** Type `/` for the commands your setup supports, including your own. The full list arrives once the session is running; before that you see the common built-ins.
 - **Built for a phone.** Installable as a home-screen app, safe-area aware, swipeable sheets, light and dark themes. Reconnects by itself when the phone wakes up.
 
 ## Quick start
 
-You need Node.js 20+ and pnpm, on the computer that runs Claude Code. Claude Code must already be signed in on that machine (run `claude` once if it isn't).
+You need Node.js 22.18 or newer (22 or 24 LTS) and pnpm, on the computer that runs Claude Code. Claude Code must already be signed in on that machine (run `claude` once if it isn't).
 
 ```bash
 git clone https://github.com/sifenfisaha/kiteline.git && cd kiteline
@@ -47,7 +47,7 @@ The server prints its addresses and a QR code:
   ▄▄▄▄▄▄▄ ...
 ```
 
-Scan the code with your phone's camera. The page opens already paired, and the pairing lasts until you reset it.
+Scan the code with your phone's camera. The page opens already paired, and stays paired for 400 days or until you reset the token.
 
 ### Reaching it from outside your home network
 
@@ -77,7 +77,9 @@ loginctl enable-linger "$USER"     # start at boot, before you log in
 journalctl --user -u kiteline -f   # logs
 ```
 
-To pair another phone while it runs in the background, run `pnpm pair`: it shows the QR code without starting a second server.
+The template listens on `127.0.0.1`, for use with `tailscale serve`; remove its `HOST` line to reach Kiteline over your Wi-Fi as well.
+
+To pair another phone while it runs in the background, run `pnpm pair`: it shows the QR code without starting a second server. If you've moved Kiteline's state with `KITELINE_HOME`, set that in your shell for `pnpm pair` too; it doesn't read `apps/server/.env`.
 
 After pulling new code, run `pnpm build` and `systemctl --user restart kiteline`. Restarting stops any running sessions; they resume when you send the next message.
 
@@ -100,7 +102,7 @@ On battery the lid still puts it to sleep.
 ```
 
 - The server uses the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) to run Claude Code. Each live session is one Claude Code process with streaming input, so follow-up messages, interrupts, mode changes and permission prompts all go to the same process.
-- Permission prompts arrive through the SDK's `canUseTool` callback. The server holds the call open, pushes the request to every paired device, and answers with your decision.
+- Permission prompts arrive through the SDK's `canUseTool` callback. The server holds the call open, pushes the request to every device that has the session open (the others see it as waiting in the session list), and answers with your decision.
 - Session history is read from Claude Code's own transcripts in `~/.claude/projects`, so terminal sessions and Kiteline sessions are the same thing.
 - An idle session's process is stopped after 20 minutes. The next message resumes it.
 
@@ -109,9 +111,10 @@ On battery the lid still puts it to sleep.
 Kiteline can run commands on your computer, so treat the pairing link like a password.
 
 - Pairing uses a random token stored in `~/.kiteline/auth.json` (mode 600). The link carries it in the URL fragment, which browsers never send to servers.
-- A paired device gets an `HttpOnly`, `SameSite=Strict` cookie derived from that token. Every API call checks it; nothing works unpaired.
-- Ten wrong codes from one address locks that address out for ten minutes.
-- `pnpm start -- --new-token` replaces the token and unpairs every device.
+- A paired device gets an `HttpOnly`, `SameSite=Strict` cookie derived from that token, `Secure` when served over HTTPS, valid for 400 days. Every API call checks it (or an `Authorization: Bearer` header with the token); nothing but a health check works unpaired.
+- The pairing link is printed when the server starts, so it also ends up in the service's log (`journalctl`). Treat that log like the link.
+- Ten wrong codes from one address locks that address out for ten minutes. Behind `tailscale serve` every request arrives from `127.0.0.1`, so a lockout there applies to all your devices at once.
+- `pnpm start -- --new-token` replaces the token and unpairs every device. If Kiteline runs as a service, stop it first (`systemctl --user stop kiteline`), run that once, then start the service again. It has no effect when `KITELINE_TOKEN` is set.
 - Set `KITELINE_ALLOW_BYPASS=false` to stop anyone from switching a session into bypass-permissions mode from the web.
 
 Kiteline uses whatever credentials Claude Code on your computer uses: your claude.ai login, or `ANTHROPIC_API_KEY` if it's set. Check that the way you use it fits your plan's terms.
@@ -126,39 +129,43 @@ Everything has a default. Override with environment variables or `apps/server/.e
 | `HOST`                  | `0.0.0.0`     | Address to bind. Use `127.0.0.1` with `tailscale serve` to keep it off the LAN                      |
 | `KITELINE_PUBLIC_URL`   | unset         | The address your phone uses, e.g. your `tailscale serve` HTTPS URL. The pairing QR code points here |
 | `KITELINE_TOKEN`        | generated     | Fixed pairing token instead of the stored one                                                       |
-| `KITELINE_HOME`         | `~/.kiteline` | Where Kiteline keeps its token and session index                                                    |
+| `KITELINE_HOME`         | `~/.kiteline` | Where Kiteline keeps its token, session index and last pairing link                                 |
 | `CLAUDE_PATH`           | bundled       | Path to a `claude` executable to use instead of the SDK's bundled one                               |
 | `KITELINE_ALLOW_BYPASS` | `true`        | Whether bypass-permissions mode can be chosen from the web                                          |
 | `KITELINE_MAX_SESSIONS` | `6`           | Most Claude Code processes running at once                                                          |
 | `KITELINE_IDLE_MINUTES` | `20`          | Minutes before an idle session's process sleeps                                                     |
-| `KITELINE_DEBUG`        | unset         | Log requests and Claude Code's stderr                                                               |
+| `KITELINE_DEBUG`        | unset         | Log requests, API errors and Claude Code's stderr                                                   |
 
 ## Development
 
 ```bash
-pnpm dev          # server on :4545 (watch mode), web on :4546 with hot reload
+pnpm dev          # server on :4545 (watch mode), web on :4546 with hot reload, website on :4547
 pnpm check        # Biome lint and format
 pnpm check-types  # TypeScript across the workspace
 ```
 
-The landing page's demo is made with [Stageshow](https://benji.org/stageshow). `pnpm --filter site dev` serves it on :4547; with that running, `node apps/site/scripts/record-demo.mjs http://localhost:4547 out` re-records the README animation (it needs Chromium and ffmpeg).
+The website's animated demo is made with [Stageshow](https://benji.org/stageshow). `pnpm --filter site dev` serves the site on :4547; with that running, `node apps/site/scripts/record-demo.mjs http://localhost:4547 out` records one loop of the demo to `out/kiteline-demo.webp`. Copy it over `docs/kiteline-demo.webp` to update the animation at the top of this README. It needs `chromium` on your `PATH` and an ffmpeg built with libwebp.
 
-In development the QR code points at the Vite server on port 4546, which proxies `/rpc` and `/auth` to the API.
+In development the QR code points at the Vite server on port 4546 (unless `KITELINE_PUBLIC_URL` is set), which proxies `/rpc` and `/auth` to the API on `localhost:4545`.
 
 ```
 apps/
-  server/     Hono server: pairing, oRPC endpoint, static hosting, terminal banner
-  web/        React 19 + TanStack Router PWA
-  site/       Landing page and the animated demo, built with Stageshow's kit
+  server/       Hono server: pairing, oRPC endpoint, static hosting, terminal banner, `pnpm pair`
+  web/          React 19 + TanStack Router PWA
+  site/         The website: photographed-sky hero, feature grid, install steps, and the
+                Stageshow demo (src/demo) drawn with Stageshow's kit (vendored in src/kit)
 packages/
-  api/        oRPC routers and the agent layer
-    agent/
+  api/          oRPC routers (src/routers: sessions, runs, fs) and the agent layer
+    src/agent/
       run.ts        one live Claude Code process: streaming, permissions, interrupts
       manager.ts    all live runs, fan-out to devices, idle sleep
       normalize.ts  SDK messages and transcripts → the items the app renders
       history.ts    session lists and transcript pages
-  ui/         Design tokens (Tailwind v4), button, bottom sheet, toasts
-  config/     Shared TypeScript config
+      tracker.ts    the sessions Kiteline started (~/.kiteline/sessions.json)
+      queue.ts      the async queue behind streaming input and subscribers
+      types.ts      the wire model shared with the app, permission modes included
+  ui/           Design tokens (Tailwind v4), button, bottom sheet, toasts
+  config/       Shared TypeScript config
 ```
 
 Built on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (TanStack Router, Hono, oRPC, Turborepo, Biome, PWA), with [Base UI](https://base-ui.com), [Shiki](https://shiki.style), [Phosphor](https://phosphoricons.com) icons and [Inter](https://rsms.me/inter/). The design follows the craft rules of [Stageshow](https://benji.org/stageshow), whose kit draws the demo. The website's sky is a photograph by [Nothing Ahead](https://www.pexels.com/@ian-panelo/) on [Pexels](https://www.pexels.com/photo/clouds-in-the-sky-8726326/), used under the [Pexels license](https://www.pexels.com/license/) rather than this project's MIT license.

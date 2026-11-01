@@ -10,7 +10,7 @@ Wants=network-online.target
 Type=simple
 # Where you cloned Kiteline (%h is your home folder).
 WorkingDirectory=%h/kiteline/apps/server
-# Absolute path to Node 20 or newer: see `which node`.
+# Absolute path to Node 22.18 or newer: see `which node`.
 ExecStart=/usr/bin/node dist/index.mjs
 # Reachable only through `tailscale serve`, which adds HTTPS on your tailnet.
 Environment=HOST=127.0.0.1

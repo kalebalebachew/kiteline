@@ -1,8 +1,11 @@
 // Records one loop of the hero demo as PNG frames, stepping the stage's
-// virtual clock so every frame is exact, then encodes an animated WebP and a
-// poster with ffmpeg.
+// virtual clock so every frame is exact, then encodes them as an animated WebP
+// with ffmpeg. Needs `chromium` on PATH and an ffmpeg built with libwebp.
 //
 //   node scripts/record-demo.mjs <site url> <out dir> [--scale 1.25]
+//
+// Writes <out dir>/kiteline-demo.webp (and the frames in <out dir>/frames);
+// copy the WebP over docs/kiteline-demo.webp to update the README.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -82,10 +85,9 @@ for (let f = 0; f < FPS * 40; f++) {
 const asks = marks.flatMap((m, i) => (m === "ask" && marks[i - 1] !== "ask" ? [i] : []));
 if (asks.length < 2) throw new Error("Couldn't find a full loop");
 const period = asks[1] - asks[0];
-// Land on the start of a loop: the frame a loop's opening wait begins.
-const lead = Math.round(1.3 * FPS);
-const toStart = asks[1] - lead - (marks.length - 1);
-for (let f = 0; f < toStart; f++) await step();
+// The clock now stands where the second loop's sheet starts to rise, so the
+// recording opens on the approval and ends on the Thinking line that leads
+// back into it: a seamless loop that shows the point in its first second.
 
 for (let f = 0; f < period; f++) {
 	const shot = await send("Page.captureScreenshot", { format: "png", clip: { ...box, scale: 1 } });

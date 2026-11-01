@@ -1,18 +1,20 @@
 import {
 	ArrowUpIcon,
 	CaretDownIcon,
+	CaretRightIcon,
 	CpuIcon,
 	FileTextIcon,
 	FolderSimpleIcon,
 	HandIcon,
+	ImageSquareIcon,
 	MagnifyingGlassIcon,
 	NotePencilIcon,
 	ShieldWarningIcon,
+	StopIcon,
 } from "@phosphor-icons/react";
 
 import type { Act } from "../kit/act";
 import { Collapse } from "../kit/motion/Collapse";
-import { Roll } from "../kit/motion/Roll";
 import { Stream } from "../kit/motion/Stream";
 import { Phone } from "../kit/phone";
 import { Stage } from "../kit/stage";
@@ -162,7 +164,10 @@ function Editor({ applied }: { applied: boolean }) {
 								</span>
 								<span className="kl-text">
 									<span className="kl-kw">{"  return"}</span> <span className="kl-fn">redirect</span>(
-									<Roll className="kl-arg">{applied ? 'next ?? "/"' : '"/"'}</Roll>)
+									<span className="kl-insert" data-on={applied || undefined}>
+										{"next ?? "}
+									</span>
+									<span className="kl-str">"/"</span>)
 								</span>
 							</div>
 						);
@@ -186,17 +191,23 @@ function Editor({ applied }: { applied: boolean }) {
 	);
 }
 
+/**
+ * A tool step as the app's timeline draws it: icon, verb and target, then whatever sits at the
+ * row's end, then a caret that opens it. A step waiting for approval shows no caret.
+ */
 function Step({
 	icon,
 	verb,
 	target,
 	tone,
+	pending,
 	children,
 }: {
 	icon: React.ReactNode;
 	verb: string;
 	target: string;
 	tone?: "warn";
+	pending?: boolean;
 	children?: React.ReactNode;
 }) {
 	return (
@@ -208,12 +219,15 @@ function Step({
 				<span className="kl-step__verb">{verb}</span> <span className="kl-mono">{target}</span>
 			</span>
 			{children}
+			<CaretRightIcon size={14} weight="bold" className="kl-step__caret" data-hide={pending || undefined} />
 		</div>
 	);
 }
 
 function KitelineScreen({ s }: { s: S }) {
 	const editing = s.ask || s.allowed;
+	// The turn runs until the last word of the reply; until then the composer offers Stop.
+	const running = s.words < REPLY_WORDS;
 	return (
 		<div className="kl-app" data-ask={s.ask || undefined}>
 			<div className="kl-feed">
@@ -260,18 +274,16 @@ function KitelineScreen({ s }: { s: S }) {
 								<NotePencilIcon size={14} weight="fill" data-on={s.allowed || undefined} />
 							</span>
 						}
-						verb={s.allowed ? "Edited" : "Edit"}
+						verb="Edited"
 						target="src/auth.ts"
 						tone={s.allowed ? undefined : "warn"}
+						pending={!s.allowed}
 					>
-						<span className="kl-step__end">
-							<span className="kl-review" data-show={!s.allowed || undefined}>
-								Review
-							</span>
-							<span className="kl-delta" data-show={s.allowed || undefined}>
-								<span className="kl-add">+1</span> <span className="kl-del">−1</span>
-							</span>
+						<span className="kl-review" data-hide={s.allowed || undefined}>
+							Review
 						</span>
+						<span className="kl-add">+1</span>
+						<span className="kl-del">−1</span>
 					</Step>
 				</Collapse>
 
@@ -293,6 +305,9 @@ function KitelineScreen({ s }: { s: S }) {
 				<div className="kl-composer__surface" />
 				<span className="kl-composer__placeholder">Reply…</span>
 				<div className="kl-composer__row">
+					<span className="kl-attach">
+						<ImageSquareIcon />
+					</span>
 					<span className="kl-chip">
 						<HandIcon weight="fill" />
 						Ask
@@ -304,7 +319,12 @@ function KitelineScreen({ s }: { s: S }) {
 						<CaretDownIcon weight="bold" className="kl-chip__caret" />
 					</span>
 					<span className="kl-send">
-						<ArrowUpIcon weight="bold" />
+						<span className="kl-send__stop" data-hide={!running || undefined}>
+							<StopIcon weight="fill" />
+						</span>
+						<span className="kl-send__arrow" data-hide={running || undefined}>
+							<ArrowUpIcon weight="bold" />
+						</span>
 					</span>
 				</div>
 			</div>
@@ -321,19 +341,19 @@ function KitelineScreen({ s }: { s: S }) {
 					<div className="kl-diff">
 						<div className="kl-diff__head">src/auth.ts</div>
 						<div className="kl-diff__line">
-							<span className="kl-diff__n">8</span>
+							<span className="kl-diff__n">1</span>
 							<span className="kl-diff__sign" />
-							<span>const next = form.get("next")</span>
+							<span>{'  const next = form.get("next")'}</span>
 						</div>
 						<div className="kl-diff__line" data-kind="del">
-							<span className="kl-diff__n">9</span>
+							<span className="kl-diff__n">2</span>
 							<span className="kl-diff__sign">−</span>
-							<span>return redirect("/")</span>
+							<span>{'  return redirect("/")'}</span>
 						</div>
 						<div className="kl-diff__line" data-kind="add">
-							<span className="kl-diff__n">9</span>
+							<span className="kl-diff__n">2</span>
 							<span className="kl-diff__sign">+</span>
-							<span>return redirect(next ?? "/")</span>
+							<span>{'  return redirect(next ?? "/")'}</span>
 						</div>
 					</div>
 					<div className="kl-sheet__actions">

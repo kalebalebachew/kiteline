@@ -155,7 +155,7 @@ export function Install() {
 		<section className="setup" id="install">
 			<h2 className="statement">
 				Set it up in a few minutes.{" "}
-				<span>You need Node.js 20 or newer, pnpm, and Claude Code signed in on the computer.</span>
+				<span>You need Node.js 22.18 or newer, pnpm, and Claude Code signed in on the computer.</span>
 			</h2>
 
 			<div className="setup__grid">
