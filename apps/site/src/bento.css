@@ -408,25 +408,6 @@
 .session--current {
 	background: var(--fill);
 }
-.session__icon {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border-radius: 9px;
-	background: var(--fill);
-	color: var(--icon);
-}
-.session--current .session__icon {
-	background: var(--surface);
-	box-shadow: 0 0 0 1px var(--surface-line);
-}
-.session__icon svg {
-	width: 16px;
-	height: 16px;
-}
 .session__text {
 	display: flex;
 	flex: 1;
@@ -448,15 +429,21 @@
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
+.session__live {
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: #22c55e;
+	vertical-align: 1px;
+}
 .session__time {
 	align-self: flex-start;
 	padding-top: 2px;
 	color: var(--faint);
 	font-size: 12px;
 	font-variant-numeric: tabular-nums;
-}
-.session--filler .session__icon {
-	background: #f1f2f4;
 }
 .bar {
 	display: block;

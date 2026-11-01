@@ -161,34 +161,31 @@ function HomeScreen() {
 	);
 }
 
+/** Rows as the app draws them: title, folder and branch, when, and a dot while it's live. */
 function SessionList() {
 	return (
 		<div className="sessions">
 			<div className="sessions__day">Today</div>
 			<div className="session session--current">
-				<span className="session__icon">
-					<TerminalWindowIcon weight="fill" />
-				</span>
 				<span className="session__text">
 					<span className="session__title">Upgrade to React 19</span>
-					<span className="session__sub">web · from your terminal</span>
+					<span className="session__sub">web · main</span>
 				</span>
-				<span className="session__time">9:41</span>
+				<span className="session__time">
+					<span className="session__live" />
+					just now
+				</span>
 			</div>
 			<div className="session">
-				<span className="session__icon">
-					<DeviceMobileIcon weight="fill" />
-				</span>
 				<span className="session__text">
 					<span className="session__title">Write the release notes</span>
-					<span className="session__sub">kiteline · from your phone</span>
+					<span className="session__sub">kiteline · docs</span>
 				</span>
-				<span className="session__time">8:15</span>
+				<span className="session__time">2 hours ago</span>
 			</div>
 			<div className="sessions__day">Yesterday</div>
 			{[72, 56].map((w) => (
 				<div key={w} className="session session--filler">
-					<span className="session__icon" />
 					<span className="session__text">
 						<span className="bar" style={{ width: `${w}%` }} />
 						<span className="bar bar--sub" style={{ width: `${w - 24}%` }} />

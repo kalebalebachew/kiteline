@@ -9,10 +9,11 @@ const INSET = 4;
 /**
  * A slim scrollbar that floats over the page edge, so the hero's sky runs to the window's edge
  * instead of stopping at a gutter. Scrolling stays native (wheel, keys, touch); this only draws
- * the position and lets a mouse drag the thumb or click the track. It turns light over the sky.
+ * the position and lets a mouse drag the thumb or click the track. It turns light over the sky
+ * (`lightOver`, the element whose upper part is dark blue).
  * Touch screens, and pages without script, keep the browser's own scrollbar.
  */
-export function ScrollBar() {
+export function ScrollBar({ lightOver = ".sky" }: { lightOver?: string }) {
 	const trackRef = useRef<HTMLDivElement>(null);
 	const thumbRef = useRef<HTMLDivElement>(null);
 
@@ -22,7 +23,7 @@ export function ScrollBar() {
 		if (!track || !thumb || !window.matchMedia("(pointer: fine)").matches) return;
 
 		const root = document.documentElement;
-		const sky = document.querySelector(".sky");
+		const sky = document.querySelector(lightOver);
 		root.classList.add("custom-scrollbar");
 		track.hidden = false;
 
@@ -119,7 +120,7 @@ export function ScrollBar() {
 			root.classList.remove("custom-scrollbar");
 			track.hidden = true;
 		};
-	}, []);
+	}, [lightOver]);
 
 	return (
 		<div ref={trackRef} className="scrollbar" aria-hidden="true" hidden>

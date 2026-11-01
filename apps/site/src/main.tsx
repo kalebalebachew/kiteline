@@ -1,6 +1,7 @@
 import "@fontsource-variable/inter";
 import "@fontsource-variable/geist-mono";
 import "./kit/stageshow.css";
+import "./base.css";
 import "./site.css";
 
 import { installVirtualClock } from "./kit/clock";

@@ -1,5 +1,5 @@
 import {
-	ArrowUpRightIcon,
+	ArrowRightIcon,
 	CheckIcon,
 	CopyIcon,
 	GlobeHemisphereWestIcon,
@@ -8,48 +8,11 @@ import {
 import { type CSSProperties, useRef, useState } from "react";
 
 import { usePlayOnce } from "./play-once";
+import { QR_PATH, QR_SIZE } from "./qr";
 
 import "./install.css";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
-
-/** The site's own address, encoded with uqr as the server does; scanning it opens this page. */
-const QR = [
-	"11111110011100100100001111111",
-	"10000010000111101000101000001",
-	"10111010011100010010001011101",
-	"10111010101101011101101011101",
-	"10111010101010001111101011101",
-	"10000010011000100010101000001",
-	"11111110101010101010101111111",
-	"00000000010010101011100000000",
-	"11000111011011000100000011000",
-	"10101101001001110001000110110",
-	"01111010110111111000001110000",
-	"11110101001100101001101111000",
-	"01010110011001111000101100001",
-	"11100101111011011011001110011",
-	"01101111011001110110100001100",
-	"10011001101011100010100110101",
-	"01011111100010111110000001100",
-	"10101101011000011111101110111",
-	"11001010100011110001110011001",
-	"10100101000100100010010000000",
-	"10110010110100000101111110111",
-	"00000000111011010110100011000",
-	"11111110100001111011101011100",
-	"10000010111011010001100010011",
-	"10111010000111001001111111001",
-	"10111010001000011111010001101",
-	"10111010010110011100001111110",
-	"10000010110100010000001101101",
-	"11111110100100000111001011100",
-];
-
-/** One path for every dark module, inside a one-module light border, like the banner's. */
-const QR_PATH = QR.flatMap((row, y) =>
-	[...row].flatMap((bit, x) => (bit === "1" ? [`M${x + 1} ${y + 1}h1v1h-1z`] : [])),
-).join("");
 
 function CopyCode({ code }: { code: string }) {
 	const [copied, setCopied] = useState(false);
@@ -132,11 +95,11 @@ function Terminal() {
 					<svg
 						className="term__qr out"
 						style={at(1.35)}
-						viewBox="0 0 31 31"
+						viewBox={`0 0 ${QR_SIZE} ${QR_SIZE}`}
 						shapeRendering="crispEdges"
 						aria-hidden="true"
 					>
-						<rect width="31" height="31" fill="#e7eaf0" />
+						<rect width={QR_SIZE} height={QR_SIZE} fill="#e7eaf0" />
 						<path d={QR_PATH} fill="#0f1218" />
 					</svg>
 					<div className="term__gap" />
@@ -189,7 +152,7 @@ export function Install() {
 			</div>
 
 			<div className="setup__next">
-				<a className="next-card" href={`${REPO}#reaching-it-from-outside-your-home-network`}>
+				<a className="next-card" href="docs/#anywhere">
 					<span className="next-card__icon">
 						<GlobeHemisphereWestIcon weight="fill" />
 					</span>
@@ -197,9 +160,9 @@ export function Install() {
 						<strong>Reach it from anywhere</strong>
 						<span>Tailscale gives your phone a private HTTPS address for it, away from home.</span>
 					</span>
-					<ArrowUpRightIcon weight="bold" className="next-card__arrow" />
+					<ArrowRightIcon weight="bold" className="next-card__arrow" />
 				</a>
-				<a className="next-card" href={`${REPO}#keeping-it-running`}>
+				<a className="next-card" href="docs/#always-on">
 					<span className="next-card__icon">
 						<PowerIcon weight="fill" />
 					</span>
@@ -207,7 +170,7 @@ export function Install() {
 						<strong>Keep it running</strong>
 						<span>Run it as a service that starts at boot and keeps going with the lid closed.</span>
 					</span>
-					<ArrowUpRightIcon weight="bold" className="next-card__arrow" />
+					<ArrowRightIcon weight="bold" className="next-card__arrow" />
 				</a>
 			</div>
 		</section>

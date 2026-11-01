@@ -32,7 +32,7 @@ export function App() {
 					<nav className="nav__links" aria-label="Sections">
 						<a href="#features">Features</a>
 						<a href="#install">Install</a>
-						<a href={`${REPO}#readme`}>Docs</a>
+						<a href="docs/">Docs</a>
 					</nav>
 					<a className="nav__cta" href={REPO}>
 						GitHub
