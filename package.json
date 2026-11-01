@@ -18,7 +18,8 @@
 		"env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/",
 		"postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/",
 		"check": "biome check --write .",
-		"start": "pnpm --filter server start"
+		"start": "pnpm --filter server start",
+		"pair": "pnpm --silent --filter server pair"
 	},
 	"dependencies": {
 		"zod": "catalog:"

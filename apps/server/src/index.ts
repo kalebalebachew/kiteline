@@ -16,7 +16,7 @@ import { logger } from "hono/logger";
 
 import pkg from "../package.json" with { type: "json" };
 import { DEVICE_COOKIE, deviceSecret, kitelineHome, loadToken, PairLimiter, safeEqual } from "./auth";
-import { buildPairing, printBanner } from "./banner";
+import { buildPairing, printAlreadyRunning, printBanner, savePairing } from "./banner";
 import { createContext } from "./context";
 import { ENV } from "./env.server";
 
@@ -137,6 +137,13 @@ if (!dev && existsSync(indexFile)) {
 
 const server = serve({ fetch: app.fetch, port, hostname: host }, () => {
 	printBanner(pairing, { version: pkg.version, dev });
+	if (!dev) savePairing(home, pairing, pkg.version);
+});
+
+server.on("error", (error: NodeJS.ErrnoException) => {
+	if (error.code !== "EADDRINUSE") throw error;
+	printAlreadyRunning(port);
+	process.exit(1);
 });
 
 function shutdown() {

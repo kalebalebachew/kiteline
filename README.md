@@ -69,8 +69,10 @@ cp docs/kiteline.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now kiteline
 loginctl enable-linger "$USER"     # start at boot, before you log in
-journalctl --user -u kiteline -f   # logs, including the pairing QR code
+journalctl --user -u kiteline -f   # logs
 ```
+
+To pair another phone while it runs in the background, run `pnpm pair`: it shows the QR code without starting a second server.
 
 After pulling new code, run `pnpm build` and `systemctl --user restart kiteline`. Restarting stops any running sessions; they resume when you send the next message.
 

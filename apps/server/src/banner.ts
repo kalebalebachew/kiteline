@@ -1,4 +1,6 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
+import { join } from "node:path";
 import type { Pairing } from "@kiteline/api/context";
 import { renderSVG, renderUnicodeCompact } from "uqr";
 
@@ -55,4 +57,39 @@ export function printBanner(pairing: Pairing, options: { version: string; dev: b
 		"",
 	];
 	console.log(lines.join("\n"));
+}
+
+export type SavedPairing = { version: string; url: string; urls: string[]; startedAt: string };
+
+/** Lets `pnpm pair` show the code later without starting a second server. */
+export function savePairing(home: string, pairing: Pairing, version: string) {
+	const saved: SavedPairing = {
+		version,
+		url: pairing.url,
+		urls: pairing.urls,
+		startedAt: new Date().toISOString(),
+	};
+	try {
+		mkdirSync(home, { recursive: true, mode: 0o700 });
+		writeFileSync(join(home, "pairing.json"), `${JSON.stringify(saved, null, 2)}\n`, { mode: 0o600 });
+	} catch {
+		// Only `pnpm pair` needs this file; the server runs fine without it.
+	}
+}
+
+export function printAlreadyRunning(port: number) {
+	console.error(
+		[
+			"",
+			`  ${accent("◆")}  ${bold("Kiteline didn't start:")} port ${port} is already in use.`,
+			"",
+			"  If Kiteline is already running, for example as the background service,",
+			"  there's nothing to start. Show the pairing code with:",
+			"",
+			`    ${accent("pnpm pair")}`,
+			"",
+			dim("  Otherwise another program has the port; set PORT to use a different one."),
+			"",
+		].join("\n"),
+	);
 }
