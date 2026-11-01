@@ -3,7 +3,6 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { Features } from "./bento";
 import { KitelineDemo } from "./demo/KitelineDemo";
 import { Install } from "./install";
-import { KiteMark } from "./mark";
 import { Clouds, FlyingKite, Sky } from "./sky";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
@@ -27,9 +26,6 @@ export function App() {
 
 				<header className="nav">
 					<a className="brand" href="./">
-						<span className="brand__tile">
-							<KiteMark />
-						</span>
 						Kiteline
 					</a>
 					<nav className="nav__links" aria-label="Sections">

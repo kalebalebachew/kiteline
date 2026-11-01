@@ -143,26 +143,9 @@ svg {
 	color: #fff;
 }
 .brand {
-	display: inline-flex;
-	align-items: center;
-	gap: 10px;
-	font-size: 16px;
+	font-size: 18px;
 	font-weight: 600;
-	letter-spacing: -0.015em;
-}
-.brand__tile {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border-radius: 9px;
-	background: #0d1016;
-	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
-}
-.mark {
-	width: 22px;
-	height: 22px;
+	letter-spacing: -0.02em;
 }
 .nav__links {
 	display: flex;

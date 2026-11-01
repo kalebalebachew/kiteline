@@ -1,5 +1,5 @@
 /** Kiteline's mark, drawn white for a dark tile. */
-export function KiteMark({ className = "mark" }: { className?: string }) {
+export function KiteMark({ className }: { className: string }) {
 	return (
 		<svg viewBox="0 0 64 64" className={className} aria-hidden="true">
 			<path
