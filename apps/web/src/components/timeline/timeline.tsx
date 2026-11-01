@@ -53,11 +53,13 @@ function toBlocks(items: Item[]): Block[] {
 
 function UserBubble({ item }: { item: Extract<Item, { kind: "user" }> }) {
 	return (
-		<div className="flex justify-end pl-12">
+		<div className="flex flex-col items-end pl-12">
 			<div
 				className={cn(
 					"bg-surface-2 max-w-full rounded-[18px] rounded-br-[6px] px-3.5 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
 					item.command && "font-mono text-[13px]",
+					item.cancelled &&
+						"text-muted-foreground bg-transparent shadow-[inset_0_0_0_1px_var(--border-strong)]",
 				)}
 			>
 				{item.images ? (
@@ -68,6 +70,9 @@ function UserBubble({ item }: { item: Extract<Item, { kind: "user" }> }) {
 				) : null}
 				{item.text}
 			</div>
+			{item.cancelled ? (
+				<span className="text-faint mt-1 mr-1 text-[12px]">Not sent: Stop cancelled it before it ran</span>
+			) : null}
 		</div>
 	);
 }

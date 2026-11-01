@@ -269,7 +269,10 @@ export function Content() {
 						While it works you'll see "Thinking…". The square button in place of Send is <strong>Stop</strong>
 						: it interrupts the turn.
 					</li>
-					<li>You can send another message while it works; it goes to the same session.</li>
+					<li>
+						You can send another message while it works; it runs as soon as the current turn ends. Stop
+						cancels it too if it hasn't started, and marks it "Not sent".
+					</li>
 					<li>
 						After a turn, a small line shows the turns and the cost Claude Code reported for this visit.
 					</li>

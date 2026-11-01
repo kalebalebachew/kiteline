@@ -22,6 +22,8 @@ export type Item =
 			images: number;
 			/** Set when the turn was a slash command, e.g. "/compact". */
 			command?: string;
+			/** Stop cancelled it while it waited in the queue, before Claude Code read it. */
+			cancelled?: boolean;
 	  }
 	| { kind: "text"; id: string; text: string; parent: string | null }
 	| { kind: "thinking"; id: string; text: string; parent: string | null }

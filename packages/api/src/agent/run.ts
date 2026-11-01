@@ -76,6 +76,8 @@ export class Run {
 	private interrupting = false;
 	/** Claude Code reports its own running/idle state; once it has, that decides the status. */
 	private stateEvents = false;
+	/** Messages Stop cancelled, to move after the cut-off reply once the stopped turn ends. */
+	private cancelled = new Set<string>();
 
 	constructor(
 		options: RunOptions,
@@ -201,11 +203,37 @@ export class Run {
 		}
 	}
 
+	/**
+	 * Stop means stop everything: the turn running now, and any message sent while it worked that
+	 * Claude Code hasn't read yet. Those are marked cancelled where they sit in the conversation.
+	 */
 	async interrupt() {
-		// A Stop can drop the turns queued behind the current one, so stop counting on them; if one
-		// still runs, its first message sets the status back to running.
 		if (this.status === "running" || this.status === "waiting") this.interrupting = true;
-		await this.q.interrupt();
+		// The SDK's interrupt takes { cancelQueued } and passes it on as cancel_queued, which the CLI
+		// honours (interrupt_cancel_queued_v1); its published types don't list the option yet.
+		const interrupt = this.q.interrupt as (options?: {
+			cancelQueued?: boolean;
+		}) => Promise<{ still_queued: string[]; cancelled?: string[] } | undefined>;
+		const receipt = await interrupt.call(this.q, { cancelQueued: true });
+		for (const id of receipt?.cancelled ?? []) {
+			const item = this.items.find((i) => i.id === id);
+			if (item?.kind !== "user") continue;
+			this.replace({ ...item, cancelled: true });
+			this.cancelled.add(id);
+		}
+	}
+
+	/**
+	 * Queued messages show as soon as they're sent, so they sit above the reply that was still being
+	 * written. Once the stopped turn has ended, the ones Stop cancelled move below it, where they
+	 * belong; every watcher gets the new order as a snapshot.
+	 */
+	private settleCancelled() {
+		if (!this.cancelled.size) return;
+		const moved = this.items.filter((i) => this.cancelled.has(i.id));
+		this.items = [...this.items.filter((i) => !this.cancelled.has(i.id)), ...moved];
+		this.cancelled.clear();
+		this.emit({ type: "snapshot", run: this.snapshot() });
 	}
 
 	async setPermissionMode(mode: PermissionModeId) {
@@ -346,6 +374,7 @@ export class Run {
 				const stopped = this.interrupting;
 				this.interrupting = false;
 				this.turnsOwed = stopped ? 0 : Math.max(0, this.turnsOwed - 1);
+				this.settleCancelled();
 				// A turn the user stopped isn't an error; Claude Code marks it "Interrupted" itself.
 				if (m.subtype !== "success" && !stopped) {
 					const detail = "errors" in m && Array.isArray(m.errors) ? m.errors.join("\n") : "";
@@ -420,6 +449,14 @@ export class Run {
 		this.items.push(item);
 		this.emit({ type: "item", item });
 		this.touch();
+	}
+
+	/** Updates an item already sent; watchers swap it in by id. */
+	private replace(item: Item) {
+		const at = this.items.findIndex((i) => i.id === item.id);
+		if (at === -1) return;
+		this.items[at] = item;
+		this.emit({ type: "item", item });
 	}
 
 	private resetDraft() {
