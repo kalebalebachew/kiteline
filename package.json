@@ -1,0 +1,31 @@
+{
+  "name": "claudy",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev:web": "turbo run dev -F web --",
+    "dev:server": "turbo run dev -F server --",
+    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/",
+    "check": "biome check --write ."
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.2",
+    "@claudy/config": "workspace:*",
+    "@types/node": "^26.4.1",
+    "turbo": "^2.11.7",
+    "typescript": "catalog:",
+    "varlock": "catalog:"
+  },
+  "packageManager": "pnpm@12.15.0"
+}
