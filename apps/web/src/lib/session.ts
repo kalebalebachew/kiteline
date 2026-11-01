@@ -1,8 +1,9 @@
 import type { HistoryPage, Item, RunEvent, RunSnapshot } from "@kiteline/api/agent/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { toast } from "sonner";
 
-import { client, isUnauthorized, orpc } from "./orpc";
+import { client, errorMessage, isUnauthorized, orpc } from "./orpc";
 
 type State = {
 	run: RunSnapshot | null;
@@ -78,12 +79,17 @@ const sleep = (ms: number, signal: AbortSignal) =>
 		});
 	});
 
-/** Live events for one session. Reconnects with backoff, and at once when the tab comes back. */
+/**
+ * Live events for one session. Reconnects with backoff, and at once when the tab comes back: a phone
+ * that slept can leave a stream that looks open but is dead, and a snapshot replaces state, so a
+ * fresh connection is always safe.
+ */
 export function useRunStream(sessionId: string | null) {
 	const [state, dispatch] = useReducer(reducer, { run: null, retired: [], generation: 0 });
 	const [connected, setConnected] = useState(false);
 	const queryClient = useQueryClient();
 	const wake = useRef<AbortController | null>(null);
+	const stream = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		if (!sessionId) return;
@@ -93,17 +99,28 @@ export function useRunStream(sessionId: string | null) {
 
 		void (async () => {
 			while (!signal.aborted) {
+				const connection = new AbortController();
+				stream.current = connection;
+				const drop = () => connection.abort();
+				signal.addEventListener("abort", drop, { once: true });
 				try {
-					const events = await client.runs.watch({ sessionId }, { signal });
+					const events = await client.runs.watch({ sessionId }, { signal: connection.signal });
 					setConnected(true);
 					attempt = 0;
 					for await (const event of events) dispatch(event);
 				} catch (error) {
 					if (signal.aborted) break;
+					// Dropped on purpose to reconnect: go straight back.
+					if (connection.signal.aborted) {
+						attempt = 0;
+						continue;
+					}
 					if (isUnauthorized(error)) {
 						queryClient.setQueryData(["auth"], { authed: false });
 						break;
 					}
+				} finally {
+					signal.removeEventListener("abort", drop);
 				}
 				setConnected(false);
 				if (signal.aborted) break;
@@ -114,15 +131,26 @@ export function useRunStream(sessionId: string | null) {
 			}
 		})();
 
+		let hiddenAt = 0;
 		const onVisible = () => {
-			if (document.visibilityState === "visible") wake.current?.abort();
+			if (document.visibilityState === "hidden") {
+				hiddenAt = Date.now();
+				return;
+			}
+			wake.current?.abort();
+			if (hiddenAt && Date.now() - hiddenAt > 3000) stream.current?.abort();
+			hiddenAt = 0;
+		};
+		const onOnline = () => {
+			wake.current?.abort();
+			stream.current?.abort();
 		};
 		document.addEventListener("visibilitychange", onVisible);
-		window.addEventListener("online", onVisible);
+		window.addEventListener("online", onOnline);
 		return () => {
 			controller.abort();
 			document.removeEventListener("visibilitychange", onVisible);
-			window.removeEventListener("online", onVisible);
+			window.removeEventListener("online", onOnline);
 			setConnected(false);
 		};
 	}, [sessionId, queryClient]);
@@ -164,10 +192,30 @@ export function useHistory(sessionId: string | null) {
 		try {
 			const page = await client.sessions.history({ sessionId, before: first.start, limit: 240 });
 			setEarlier((pages) => [page, ...pages]);
+		} catch (error) {
+			toast.error(errorMessage(error));
 		} finally {
 			setLoadingEarlier(false);
 		}
 	}, [sessionId, first]);
+
+	// The latest page slides forward as the session grows; once earlier pages are loaded, that leaves
+	// a hole between them. Fetch it, so nothing goes missing.
+	const latestStart = latest.data?.start ?? 0;
+	const earlierEnd = earlier.length ? (earlier.at(-1)?.start ?? 0) + (earlier.at(-1)?.items.length ?? 0) : 0;
+	useEffect(() => {
+		if (!sessionId || !earlier.length || latestStart <= earlierEnd) return;
+		let cancelled = false;
+		void client.sessions
+			.history({ sessionId, before: latestStart, limit: Math.min(1000, latestStart - earlierEnd) })
+			.then((page) => {
+				if (!cancelled) setEarlier((pages) => [...pages, page]);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [sessionId, earlier.length, latestStart, earlierEnd]);
 
 	const items = useMemo(
 		() => [...earlier.flatMap((p) => p.items), ...(latest.data?.items ?? [])],
@@ -177,11 +225,40 @@ export function useHistory(sessionId: string | null) {
 	return { items, isLoading: latest.isLoading, error: latest.error, hasEarlier, loadEarlier, loadingEarlier };
 }
 
-/** History, then earlier runs from this visit, then the live run; later copies of an id win. */
-export function mergeTimeline(history: Item[], retired: Item[], live: Item[]) {
-	const byId = new Map<string, Item>();
-	for (const list of [history, retired, live]) {
-		for (const item of list) byId.set(item.id, item);
+/**
+ * Lays items from this visit's runs into the saved history. An item history knows replaces its copy
+ * in place; one it doesn't (a notice seen only live, or a turn not written yet) goes right after the
+ * last known item before it, so a refresh never moves anything to the bottom.
+ */
+function weave(out: Item[], list: Item[], windowStartsLater: boolean) {
+	const position = (id: string) => out.findIndex((item) => item.id === id);
+	const firstKnown = list.find((item) => position(item.id) !== -1);
+	// History hasn't caught up with this run yet: it all comes after.
+	if (!firstKnown) {
+		for (const item of list) if (position(item.id) === -1) out.push(item);
+		return;
 	}
-	return [...byId.values()];
+	let lead = position(firstKnown.id);
+	// Before the first known item and the loaded window starts there: it's older than the window.
+	const dropLeading = windowStartsLater && lead === 0;
+	let anchor = -1;
+	for (const item of list) {
+		const at = position(item.id);
+		if (at !== -1) {
+			out[at] = item;
+			anchor = at;
+		} else if (anchor === -1) {
+			if (!dropLeading) out.splice(lead++, 0, item);
+		} else {
+			out.splice(++anchor, 0, item);
+		}
+	}
+}
+
+/** History, then earlier runs from this visit, then the live run; later copies of an id win. */
+export function mergeTimeline(history: Item[], retired: Item[], live: Item[], windowStartsLater = false) {
+	const out = [...history];
+	weave(out, retired, windowStartsLater);
+	weave(out, live, windowStartsLater);
+	return out;
 }

@@ -11,6 +11,24 @@ import { usePrefs } from "@/lib/prefs";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "./menu";
 
 const FALLBACK_COMMANDS = ["compact", "clear", "context", "cost", "init", "review", "memory", "model"];
+const MAX_IMAGES = 6;
+
+/** Unsent text, kept per conversation on this device so leaving the page or a reload doesn't lose it. */
+function readDraft(key: string | undefined) {
+	if (!key) return "";
+	try {
+		return localStorage.getItem(`kiteline:draft:${key}`) ?? "";
+	} catch {
+		return "";
+	}
+}
+function writeDraft(key: string | undefined, text: string) {
+	if (!key) return;
+	try {
+		if (text) localStorage.setItem(`kiteline:draft:${key}`, text);
+		else localStorage.removeItem(`kiteline:draft:${key}`);
+	} catch {}
+}
 
 export type ComposerSubmit = { text: string; images: Attachment[] };
 
@@ -29,6 +47,8 @@ type ComposerProps = {
 	modelInUse?: string | null;
 	onModelChange: (model: string | null) => void;
 	autoFocus?: boolean;
+	/** Where to keep the unsent draft, e.g. the session id. */
+	draftKey?: string;
 };
 
 export function Composer({
@@ -46,9 +66,11 @@ export function Composer({
 	modelInUse,
 	onModelChange,
 	autoFocus,
+	draftKey,
 }: ComposerProps) {
 	const prefs = usePrefs();
-	const [text, setText] = useState("");
+	const [text, setText] = useState(() => readDraft(draftKey));
+	useEffect(() => writeDraft(draftKey, text), [draftKey, text]);
 	const [images, setImages] = useState<Attachment[]>([]);
 	const textarea = useRef<HTMLTextAreaElement>(null);
 	const fileInput = useRef<HTMLInputElement>(null);
@@ -72,21 +94,28 @@ export function Composer({
 		return [...new Set(all)].filter((c) => c.toLowerCase().includes(commandQuery.toLowerCase())).slice(0, 7);
 	}, [commandQuery, slashCommands]);
 
-	const canSend = (text.trim().length > 0 || images.length > 0) && !disabled && !sending;
-	const showStop = running && !canSend && !!onStop;
+	const empty = !text.trim() && !images.length;
+	const canSend = !empty && !disabled && !sending;
+	// Stop only with nothing to send and nothing sending, so a second tap on Send never lands on Stop.
+	const showStop = running && !!onStop && empty && !sending;
 
 	async function submit() {
 		if (!canSend) return;
-		const ok = await onSubmit({ text: text.trim(), images });
+		const sent = { text: text.trim(), images };
+		const ok = await onSubmit(sent);
 		if (ok) {
-			setText("");
-			for (const image of images) URL.revokeObjectURL(image.previewUrl);
-			setImages([]);
+			// Keep anything typed or added while it was sending.
+			setText((current) => (current.trim() === sent.text ? "" : current));
+			for (const image of sent.images) URL.revokeObjectURL(image.previewUrl);
+			setImages((current) => current.filter((image) => !sent.images.includes(image)));
 		}
 	}
 
 	function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-		if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+		// Enter that confirms a candidate in a Chinese, Japanese or Korean keyboard isn't a send; Safari
+		// reports it with keyCode 229 rather than isComposing.
+		if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+		if (event.key === "Enter" && !event.shiftKey) {
 			if (commands.length && commandQuery !== undefined) {
 				event.preventDefault();
 				setText(`/${commands[0]} `);
@@ -101,10 +130,17 @@ export function Composer({
 
 	async function addFiles(files: FileList | null) {
 		if (!files?.length) return;
-		const picked = [...files].filter((f) => f.type.startsWith("image/")).slice(0, 6 - images.length);
+		const all = [...files].filter((f) => f.type.startsWith("image/"));
+		const picked = all.slice(0, Math.max(0, MAX_IMAGES - images.length));
+		if (picked.length < all.length) toast(`You can send up to ${MAX_IMAGES} images at a time.`);
 		try {
 			const next = await Promise.all(picked.map(toAttachment));
-			setImages((current) => [...current, ...next]);
+			// Two quick picks can both count on the same free room; keep the limit either way.
+			setImages((current) => {
+				const kept = [...current, ...next].slice(0, MAX_IMAGES);
+				for (const image of next) if (!kept.includes(image)) URL.revokeObjectURL(image.previewUrl);
+				return kept;
+			});
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Couldn't add that image.");
 		}
@@ -166,7 +202,8 @@ export function Composer({
 					onChange={(e) => setText(e.target.value)}
 					onKeyDown={onKeyDown}
 					onPaste={(e) => {
-						if (e.clipboardData.files.length) {
+						// Rich text often carries a picture of itself too; then the text is what was meant.
+						if (e.clipboardData.files.length && !e.clipboardData.getData("text/plain")) {
 							e.preventDefault();
 							void addFiles(e.clipboardData.files);
 						}

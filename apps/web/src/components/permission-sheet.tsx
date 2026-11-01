@@ -347,7 +347,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 			description={description}
 			footer={denying ? denyFooter : allowFooter}
 		>
-			{request.blockedPath ? (
+			{outsideProject(request.blockedPath, cwd) ? (
 				<p className="bg-warning-soft text-warning mb-3 flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px]">
 					<ShieldWarningIcon weight="fill" className="mt-px size-4 flex-none" />
 					<span>
@@ -358,6 +358,17 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 			<ToolBody tool={tool} cwd={cwd} />
 		</Sheet>
 	);
+}
+
+/**
+ * Claude Code names the path behind a request; it's only worth a warning when that path lies outside
+ * the session's project.
+ */
+function outsideProject(path: string | null, cwd: string | null): path is string {
+	if (!path) return false;
+	if (!cwd) return true;
+	const root = cwd.replace(/\/+$/, "");
+	return path !== root && !path.startsWith(`${root}/`);
 }
 
 function stringField(value: unknown) {

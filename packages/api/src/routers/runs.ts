@@ -7,7 +7,8 @@ const permissionMode = z.enum(PERMISSION_MODES);
 
 const image = z.object({
 	mediaType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
-	data: z.base64().max(8_000_000),
+	// About 3.7 MB an image once decoded, inside the API's 5 MB limit; the phone shrinks photos first.
+	data: z.base64().max(5_000_000, "That image is too big to send."),
 });
 
 const decision = z.discriminatedUnion("behavior", [

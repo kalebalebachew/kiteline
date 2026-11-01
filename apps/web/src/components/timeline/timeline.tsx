@@ -23,6 +23,8 @@ export type TimelineContext = {
 	/** True while the run is executing: tools without results show as in progress. */
 	working: boolean;
 	pendingIds: Set<string>;
+	/** Items from the live process. Only these can still be running; older result-less ones were cut off. */
+	liveIds: Set<string>;
 	toolProgress: Record<string, number>;
 	onOpenPermission: (id: string) => void;
 };
@@ -118,7 +120,7 @@ function Notice({ item }: { item: Extract<Item, { kind: "notice" }> }) {
 function StepIcon({ tool, ctx }: { tool: Tool; ctx: TimelineContext }) {
 	const Icon = describeTool(tool, ctx.cwd).icon;
 	const pending = ctx.pendingIds.has(tool.id);
-	const running = !tool.result && ctx.working && !pending;
+	const running = !tool.result && ctx.working && !pending && ctx.liveIds.has(tool.id);
 	const failed = tool.result?.isError;
 	return (
 		<span

@@ -6,7 +6,7 @@ import { getSessionInfo } from "@anthropic-ai/claude-agent-sdk";
 import { AsyncQueue } from "./queue";
 import { type ImageInput, Run } from "./run";
 import type { SessionTracker } from "./tracker";
-import type { PermissionDecision, PermissionModeId, RunEvent, RunSummary } from "./types";
+import type { PermissionDecision, PermissionModeId, RunEvent, RunSnapshot, RunSummary } from "./types";
 
 export type ManagerConfig = {
 	claudePath: string | null;
@@ -28,6 +28,10 @@ export type SendInput = {
 
 export class RunManager {
 	private readonly runs = new Map<string, Run>();
+	/** Sessions being woken right now, so a second send waits and joins the same run. */
+	private readonly starting = new Map<string, Promise<void>>();
+	/** Runs that died with an error, kept a few minutes so a reconnecting phone still sees why. */
+	private readonly failed = new Map<string, { snapshot: RunSnapshot; at: number }>();
 	private readonly sessionWatchers = new Map<string, Set<AsyncQueue<RunEvent>>>();
 	private readonly listWatchers = new Set<AsyncQueue<RunSummary[]>>();
 	private listTimer: ReturnType<typeof setTimeout> | null = null;
@@ -62,6 +66,15 @@ export class RunManager {
 	async send(input: SendInput): Promise<{ sessionId: string }> {
 		const text = input.text.trim();
 		if (!text && !input.images?.length) throw new Error("Write a message first.");
+		// A phone may still hold Bypass as its default after the server turned it off.
+		const permissionMode =
+			input.permissionMode === "bypassPermissions" && !this.config.allowBypass
+				? "default"
+				: input.permissionMode;
+
+		// Another send is already waking this session: wait for it, then join the run it started.
+		const waking = input.sessionId ? this.starting.get(input.sessionId) : undefined;
+		if (waking) await waking;
 
 		const live = input.sessionId ? this.runs.get(input.sessionId) : undefined;
 		if (live?.isLive) {
@@ -69,10 +82,21 @@ export class RunManager {
 			return { sessionId: live.sessionId };
 		}
 
-		const liveCount = [...this.runs.values()].filter((run) => run.isLive).length;
-		if (liveCount >= this.config.maxLiveRuns) {
-			throw new Error(`${liveCount} sessions are already running. Stop one before starting another.`);
+		const sessionId = input.sessionId;
+		if (!sessionId) return this.start({ ...input, permissionMode }, text);
+		let started = () => {};
+		this.starting.set(sessionId, new Promise<void>((resolve) => (started = resolve)));
+		try {
+			return await this.start({ ...input, permissionMode }, text);
+		} finally {
+			this.starting.delete(sessionId);
+			started();
 		}
+	}
+
+	/** Starts a Claude Code process for a new session, or wakes a sleeping one, and sends to it. */
+	private async start(input: SendInput, text: string): Promise<{ sessionId: string }> {
+		this.checkLimit();
 
 		let cwd = input.cwd;
 		let resume = false;
@@ -90,8 +114,11 @@ export class RunManager {
 		if (!cwd) throw new Error("Pick a project folder first.");
 		const folder = await stat(cwd).catch(() => null);
 		if (!folder?.isDirectory()) throw new Error(`${cwd} isn't a folder on this computer.`);
+		// Count again: another session may have started while this one looked up its folder.
+		this.checkLimit();
 
 		const id = sessionId;
+		this.failed.delete(id);
 		const run = new Run(
 			{
 				sessionId: id,
@@ -111,6 +138,13 @@ export class RunManager {
 		this.broadcast(id, { type: "snapshot", run: run.snapshot() });
 		run.send(text, input.images);
 		return { sessionId: id };
+	}
+
+	private checkLimit() {
+		const liveCount = [...this.runs.values()].filter((run) => run.isLive).length;
+		if (liveCount >= this.config.maxLiveRuns) {
+			throw new Error(`${liveCount} sessions are already running. Stop one before starting another.`);
+		}
 	}
 
 	respond(sessionId: string, permissionId: string, decision: PermissionDecision) {
@@ -151,9 +185,12 @@ export class RunManager {
 		watchers.add(queue);
 		const stop = () => queue.close();
 		signal?.addEventListener("abort", stop, { once: true });
+		if (signal?.aborted) queue.close();
 		try {
 			const run = this.runs.get(sessionId);
-			yield { type: "snapshot", run: run ? run.snapshot() : null };
+			const failed = this.failed.get(sessionId);
+			const recent = failed && Date.now() - failed.at < 5 * 60_000 ? failed.snapshot : null;
+			yield { type: "snapshot", run: run ? run.snapshot() : recent };
 			for await (const event of queue) yield event;
 		} finally {
 			signal?.removeEventListener("abort", stop);
@@ -193,7 +230,11 @@ export class RunManager {
 	private scheduleListUpdate() {
 		this.listTimer ??= setTimeout(() => {
 			this.listTimer = null;
-			for (const [id, run] of this.runs) if (!run.isLive) this.runs.delete(id);
+			for (const [id, run] of this.runs) {
+				if (run.isLive) continue;
+				if (run.status === "error") this.failed.set(id, { snapshot: run.snapshot(), at: Date.now() });
+				this.runs.delete(id);
+			}
 			const list = this.summaries();
 			for (const queue of this.listWatchers) queue.push(list);
 		}, 100);

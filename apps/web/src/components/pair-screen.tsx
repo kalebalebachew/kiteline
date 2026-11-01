@@ -26,10 +26,17 @@ export function PairScreen({ initialError }: { initialError?: string | null }) {
 		if (!value.trim()) return;
 		setBusy(true);
 		setError(null);
-		const result = await pair(value);
-		setBusy(false);
-		if (result.ok) queryClient.setQueryData(["auth"], { authed: true });
-		else setError(result.error);
+		try {
+			const result = await pair(value);
+			if (result.ok) queryClient.setQueryData(["auth"], { authed: true });
+			else setError(result.error);
+		} catch {
+			setError(
+				"Couldn't reach your computer. Check that Kiteline is running, and that you're on its network.",
+			);
+		} finally {
+			setBusy(false);
+		}
 	}
 
 	return (

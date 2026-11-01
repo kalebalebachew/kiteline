@@ -54,15 +54,18 @@ function AuthGate({ children }: { children: ReactNode }) {
 		const token = pendingToken;
 		if (!token) return;
 		pendingToken = null;
-		void pair(token).then((result) => {
-			if (result.ok) queryClient.setQueryData(["auth"], { authed: true });
-			else setPairError(result.error);
-			setPairing(false);
-		});
+		void pair(token)
+			.then((result) => {
+				if (result.ok) queryClient.setQueryData(["auth"], { authed: true });
+				else setPairError(result.error);
+			})
+			.catch(() => setPairError("Couldn't reach your computer to pair. Check that Kiteline is running."))
+			.finally(() => setPairing(false));
 	}, [queryClient]);
 
 	if (pairing || auth.isLoading) return <Splash />;
-	if (auth.isError) return <Offline onRetry={() => void auth.refetch()} />;
+	// Only when there's nothing to show: a failed background check mustn't wipe the page (and your draft).
+	if (auth.isError && !auth.data) return <Offline onRetry={() => void auth.refetch()} />;
 	if (!auth.data?.authed) return <PairScreen initialError={pairError} />;
 	return <HomeSync>{children}</HomeSync>;
 }

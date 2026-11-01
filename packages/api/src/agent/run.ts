@@ -67,6 +67,15 @@ export class Run {
 	private readonly q: Query;
 	private draftBuffer = "";
 	private draftTimer: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * Messages sent whose turn hasn't ended yet. A message sent while Claude Code works is its own
+	 * turn after the current one, so the run is only idle once every turn it was given has ended.
+	 */
+	private turnsOwed = 0;
+	/** Set by Stop until the interrupted turn reports its end. */
+	private interrupting = false;
+	/** Claude Code reports its own running/idle state; once it has, that decides the status. */
+	private stateEvents = false;
 
 	constructor(
 		options: RunOptions,
@@ -97,6 +106,8 @@ export class Run {
 				systemPrompt: { type: "preset", preset: "claude_code", append: PHONE_NOTE },
 				settingSources: ["user", "project", "local"],
 				canUseTool: this.canUseTool,
+				// Ask Claude Code to say when a turn is really over (after background work, too).
+				env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: "1" },
 				stderr: (line) => {
 					if (process.env.KITELINE_DEBUG)
 						process.stderr.write(`[claude ${options.sessionId.slice(0, 8)}] ${line}`);
@@ -113,7 +124,8 @@ export class Run {
 			cwd: this.cwd,
 			status: this.status,
 			items: this.items,
-			draft: this.draft + this.draftBuffer,
+			// The unflushed buffer reaches a new watcher as its next delta; counting it here too doubled it.
+			draft: this.draft,
 			meta: this.meta,
 			usage: this.usage,
 			error: this.error,
@@ -152,7 +164,9 @@ export class Run {
 			parent_tool_use_id: null,
 			message: { role: "user", content },
 		});
-		this.setStatus("running");
+		this.turnsOwed++;
+		// A message sent while a request waits for you doesn't unblock it: still waiting.
+		this.setStatus(this.pending.size ? "waiting" : "running");
 	}
 
 	respond(id: string, decision: PermissionDecision) {
@@ -163,6 +177,11 @@ export class Run {
 				pending.settle({ behavior: "allow", updatedInput: pending.input });
 				break;
 			case "allowAlways":
+				// Claude Code can refuse to remember a rule; then "always" is a plain allow.
+				if (!pending.request.canAlwaysAllow) {
+					pending.settle({ behavior: "allow", updatedInput: pending.input });
+					break;
+				}
 				pending.settle({
 					behavior: "allow",
 					updatedInput: pending.input,
@@ -183,6 +202,9 @@ export class Run {
 	}
 
 	async interrupt() {
+		// A Stop can drop the turns queued behind the current one, so stop counting on them; if one
+		// still runs, its first message sets the status back to running.
+		if (this.status === "running" || this.status === "waiting") this.interrupting = true;
 		await this.q.interrupt();
 	}
 
@@ -239,6 +261,10 @@ export class Run {
 			for await (const message of this.q) this.handle(message);
 			this.finish("closed", null);
 		} catch (error) {
+			// Don't leave the Claude Code process running behind a run that's gone.
+			try {
+				this.q.close();
+			} catch {}
 			this.finish("error", error instanceof Error ? error.message : String(error));
 		}
 	}
@@ -254,6 +280,13 @@ export class Run {
 	}
 
 	private handle(m: SDKMessage) {
+		// Work arriving while idle is a turn that started on its own, such as one queued behind a Stop.
+		if (
+			this.status === "idle" &&
+			(m.type === "assistant" || m.type === "stream_event" || m.type === "tool_progress")
+		) {
+			this.setStatus("running");
+		}
 		switch (m.type) {
 			case "assistant": {
 				if (m.parent_tool_use_id === null) this.resetDraft();
@@ -268,6 +301,11 @@ export class Run {
 			}
 			case "user": {
 				const parts = userParts(m.uuid ?? randomUUID(), m.message);
+				// Claude Code's "Interrupted" marker, with the id its transcript keeps, so it shows once
+				// live and once after a reload. Command output reaches us as a system message instead.
+				for (const item of parts.items) {
+					if (item.kind === "notice" && item.text === "Interrupted") this.push(item);
+				}
 				for (const { toolUseId, result } of parts.results) {
 					const tool = this.tools.get(toolUseId);
 					if (tool) tool.result = result;
@@ -289,6 +327,7 @@ export class Run {
 			}
 			case "tool_progress": {
 				this.toolProgress.set(m.tool_use_id, m.elapsed_time_seconds);
+				this.touch();
 				this.emit({ type: "tool-progress", toolUseId: m.tool_use_id, seconds: m.elapsed_time_seconds });
 				break;
 			}
@@ -304,7 +343,11 @@ export class Run {
 					cacheReadTokens: usage.cache_read_input_tokens,
 				};
 				this.emit({ type: "usage", usage: this.usage });
-				if (m.subtype !== "success") {
+				const stopped = this.interrupting;
+				this.interrupting = false;
+				this.turnsOwed = stopped ? 0 : Math.max(0, this.turnsOwed - 1);
+				// A turn the user stopped isn't an error; Claude Code marks it "Interrupted" itself.
+				if (m.subtype !== "success" && !stopped) {
 					const detail = "errors" in m && Array.isArray(m.errors) ? m.errors.join("\n") : "";
 					this.push({
 						kind: "notice",
@@ -313,7 +356,12 @@ export class Run {
 						text: detail || `The turn ended early (${m.subtype.replaceAll("_", " ")}).`,
 					});
 				}
-				if (this.pending.size === 0 && !(m.queued_turn_count && m.queued_turn_count > 0))
+				if (
+					!this.stateEvents &&
+					this.pending.size === 0 &&
+					this.turnsOwed === 0 &&
+					!(m.queued_turn_count && m.queued_turn_count > 0)
+				)
 					this.setStatus("idle");
 				break;
 			}
@@ -342,8 +390,13 @@ export class Run {
 				});
 				break;
 			case "session_state_changed":
-				if (m.state === "idle" && this.pending.size === 0) this.setStatus("idle");
-				else if (m.state === "running" && this.pending.size === 0) this.setStatus("running");
+				this.stateEvents = true;
+				if (m.state === "idle") {
+					// The authoritative end of a turn: nothing queued is still owed.
+					this.turnsOwed = 0;
+					this.interrupting = false;
+					if (this.pending.size === 0) this.setStatus("idle");
+				} else if (m.state === "running" && this.pending.size === 0) this.setStatus("running");
 				else if (m.state === "requires_action") this.setStatus("waiting");
 				break;
 			case "compact_boundary":

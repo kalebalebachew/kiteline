@@ -47,7 +47,8 @@ export function FolderPicker({
 				<Button
 					size="lg"
 					className="w-full"
-					disabled={!data}
+					// While a folder loads, the list still shows the last one; don't pick that by mistake.
+					disabled={!data || dirs.isPlaceholderData}
 					onClick={() => {
 						if (data) onPick(data.path);
 						onOpenChange(false);

@@ -14,7 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { ComposerSubmit } from "@/components/composer";
@@ -26,14 +26,18 @@ import { RenameSheet } from "@/components/rename-sheet";
 import { type DisplayStatus, StatusPill } from "@/components/status";
 import { Timeline, WorkingLine } from "@/components/timeline/timeline";
 import { baseName, formatCost, relativeTime } from "@/lib/format";
-import { client, orpc } from "@/lib/orpc";
+import { client, errorMessage, orpc } from "@/lib/orpc";
 import { setPrefs, usePrefs } from "@/lib/prefs";
 import { mergeTimeline, useHistory, useRunStream } from "@/lib/session";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 
 export const Route = createFileRoute("/s/$sessionId")({
 	component: SessionPage,
+	// Another session is another page: start its state fresh rather than carrying this one's over.
+	remountDeps: ({ params }) => params,
 });
+
+const NO_PROGRESS: Record<string, number> = {};
 
 function SessionPage() {
 	const { sessionId } = Route.useParams();
@@ -54,8 +58,8 @@ function SessionPage() {
 		info.data?.title ?? (run?.items.find((i) => i.kind === "user") as { text?: string } | undefined)?.text;
 
 	const items = useMemo(
-		() => mergeTimeline(history.items, retired, run?.items ?? []),
-		[history.items, retired, run?.items],
+		() => mergeTimeline(history.items, retired, run?.items ?? [], history.hasEarlier),
+		[history.items, retired, run?.items, history.hasEarlier],
 	);
 
 	// Mode and model: the live process is the source of truth; otherwise the next send uses these.
@@ -67,9 +71,12 @@ function SessionPage() {
 	const pendingIds = useMemo(() => new Set(permissions.map((p) => p.id)), [permissions]);
 	const [sheetFor, setSheetFor] = useState<string | null>(null);
 	const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
-	const current =
+	// The sheet shows the request you opened, or the first one you haven't swiped away; once every
+	// waiting request is dismissed, the bar above the composer offers the first one back.
+	const showing =
 		permissions.find((p) => p.id === sheetFor) ?? permissions.find((p) => !dismissed.has(p.id)) ?? null;
-	const sheetOpen = !!current && (sheetFor === current.id || !dismissed.has(current.id));
+	const sheetOpen = !!showing;
+	const current = showing ?? permissions[0] ?? null;
 
 	// Nudge when Claude Code needs you and you're looking elsewhere.
 	const firstPending = permissions[0]?.id;
@@ -80,6 +87,9 @@ function SessionPage() {
 		}
 		document.title = `(${permissions.length}) Needs you · Kiteline`;
 		if (document.visibilityState === "hidden") navigator.vibrate?.([60, 40, 60]);
+		return () => {
+			document.title = "Kiteline";
+		};
 	}, [firstPending, permissions.length]);
 
 	const content = useRef<HTMLDivElement>(null);
@@ -98,9 +108,28 @@ function SessionPage() {
 	});
 
 	const decide = async (id: string, decision: PermissionDecision) => {
-		await client.runs.respond({ sessionId, permissionId: id, decision });
-		setSheetFor(null);
+		try {
+			await client.runs.respond({ sessionId, permissionId: id, decision });
+			setSheetFor(null);
+		} catch (error) {
+			// The sheet stays open, so you can try again.
+			toast.error(errorMessage(error));
+		}
 	};
+
+	const stopTurn = () => void client.runs.interrupt({ sessionId }).catch((e) => toast.error(errorMessage(e)));
+
+	const openPermission = useCallback((id: string) => {
+		setSheetFor(id);
+		setDismissed((d) => new Set([...d].filter((x) => x !== id)));
+	}, []);
+	// Ids from this visit's live process: only those can still be running.
+	const liveIds = useMemo(() => new Set((run?.items ?? []).map((i) => i.id)), [run?.items]);
+	const toolProgress = run?.toolProgress ?? NO_PROGRESS;
+	const ctx = useMemo(
+		() => ({ cwd, working, pendingIds, liveIds, toolProgress, onOpenPermission: openPermission }),
+		[cwd, working, pendingIds, liveIds, toolProgress, openPermission],
+	);
 
 	const changeMode = async (next: PermissionModeId) => {
 		setMode(next);
@@ -190,7 +219,10 @@ function SessionPage() {
 									<MenuItem
 										className="text-destructive"
 										onClick={() =>
-											void client.runs.stop({ sessionId }).then(() => toast("Session put to sleep"))
+											void client.runs
+												.stop({ sessionId })
+												.then(() => toast("Session put to sleep"))
+												.catch((e) => toast.error(errorMessage(e)))
 										}
 									>
 										<PowerIcon weight="bold" className="size-4" />
@@ -228,16 +260,7 @@ function SessionPage() {
 						<Timeline
 							items={items}
 							draft={run?.draft ?? ""}
-							ctx={{
-								cwd,
-								working,
-								pendingIds,
-								toolProgress: run?.toolProgress ?? {},
-								onOpenPermission: (id) => {
-									setSheetFor(id);
-									setDismissed((d) => new Set([...d].filter((x) => x !== id)));
-								},
-							}}
+							ctx={ctx}
 							footer={
 								<>
 									{working && !run.draft ? (
@@ -308,7 +331,8 @@ function SessionPage() {
 								return false;
 							}
 						}}
-						onStop={live ? () => void client.runs.interrupt({ sessionId }) : undefined}
+						onStop={live ? stopTurn : undefined}
+						draftKey={`session:${sessionId}`}
 						running={working || run?.status === "waiting"}
 						sending={send.isPending}
 						placeholder={live ? "Reply…" : "Continue this session…"}
@@ -329,8 +353,9 @@ function SessionPage() {
 				cwd={cwd}
 				open={sheetOpen}
 				onOpenChange={(open) => {
-					if (!open && current) {
-						setDismissed((d) => new Set(d).add(current.id));
+					// Swiping it away puts every waiting request behind the bar, not just this one.
+					if (!open) {
+						setDismissed((d) => new Set([...d, ...permissions.map((p) => p.id)]));
 						setSheetFor(null);
 					}
 				}}

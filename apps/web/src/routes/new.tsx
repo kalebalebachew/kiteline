@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Composer, type ComposerSubmit } from "@/components/composer";
 import { FolderPicker } from "@/components/folder-picker";
@@ -43,6 +43,14 @@ function NewSession() {
 	const [mode, setMode] = useState<PermissionModeId>(prefs.permissionMode);
 	const [model, setModel] = useState<string | null>(prefs.model);
 
+	const left = useRef(false);
+	useEffect(
+		() => () => {
+			left.current = true;
+		},
+		[],
+	);
+
 	const start = useMutation({
 		mutationFn: (value: ComposerSubmit) => {
 			if (!selected) throw new Error("Pick a folder first.");
@@ -56,7 +64,8 @@ function NewSession() {
 		},
 		onSuccess: ({ sessionId }) => {
 			if (selected) rememberProject(selected);
-			void navigate({ to: "/s/$sessionId", params: { sessionId }, replace: true });
+			// If you've already left this page, don't pull you into the session.
+			if (!left.current) void navigate({ to: "/s/$sessionId", params: { sessionId }, replace: true });
 		},
 	});
 
@@ -147,6 +156,7 @@ function NewSession() {
 				<div className="mx-auto w-full max-w-2xl px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
 					<Composer
 						autoFocus
+						draftKey="new"
 						onSubmit={async (value) => {
 							try {
 								await start.mutateAsync(value);
