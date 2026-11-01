@@ -54,12 +54,14 @@ svg {
 /* The photograph spans the window; its cloud tops sit a fixed distance above the frame. */
 .horizon {
 	--cloud-w: max(100vw, 1100px);
+	/* How far the tallest cloud top rises above the frame: clear of the text above it. */
+	--cloud-rise: 26px;
 	position: relative;
 }
 .clouds {
 	position: absolute;
 	/* 0.279 is where the tallest cloud top sits in the photo, as a share of its width. */
-	top: calc(-56px - var(--cloud-w) * 0.279);
+	top: calc(0px - var(--cloud-rise) - var(--cloud-w) * 0.279);
 	left: 50%;
 	z-index: -1;
 	width: var(--cloud-w);
@@ -69,7 +71,7 @@ svg {
 	pointer-events: none;
 	/* Faded by distance below the frame's top, not by the photo's size, so on a wide screen the
 	   clouds still end before the next section. */
-	--frame-top: calc(var(--cloud-w) * 0.279 + 56px);
+	--frame-top: calc(var(--cloud-w) * 0.279 + var(--cloud-rise));
 	-webkit-mask-image: linear-gradient(
 		to bottom,
 		transparent,
@@ -354,9 +356,9 @@ svg {
 	/* A phone sees a slice of the photo; shift it so that slice holds a cloud top. */
 	.horizon {
 		--cloud-w: 1000px;
+		--cloud-rise: 18px;
 	}
 	.clouds {
-		top: calc(-28px - var(--cloud-w) * 0.279);
 		left: 0;
 		transform: translateX(-17%);
 	}
