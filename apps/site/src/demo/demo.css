@@ -454,11 +454,6 @@
 	font-size: 13px;
 	font-weight: 500;
 }
-/* Bypass permissions: the app tints the mode pill red, since nothing will ask first. */
-.kl-demo .kl-chip--bypass {
-	background: rgba(239, 68, 68, 0.1);
-	color: #dc2626;
-}
 .kl-demo .kl-chip svg {
 	width: 14px;
 	height: 14px;

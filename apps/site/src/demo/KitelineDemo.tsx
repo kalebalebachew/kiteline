@@ -8,7 +8,7 @@ import {
 	ImageSquareIcon,
 	MagnifyingGlassIcon,
 	NotePencilIcon,
-	ShieldSlashIcon,
+	ShieldCheckIcon,
 	StopIcon,
 	TerminalWindowIcon,
 } from "@phosphor-icons/react";
@@ -25,8 +25,8 @@ import "./demo.css";
 // and runs off the bottom; the phone straddles its right edge, cropped at the
 // top so the session and its composer stay whole.
 //
-// Story, about 11s: the session runs with full permission (Bypass), so Claude
-// Code just works. Thinking -> it reads and searches -> it edits src/auth.ts,
+// Story, about 11s: the session runs in Auto mode, where a safety check
+// approves routine calls, so Claude Code just works. Thinking -> it reads and searches -> it edits src/auth.ts,
 // and the line changes in the editor on the computer as the step lands -> it
 // runs the tests -> the reply streams in on the phone (payoff, held). The loop
 // fades the scene out and back to the start. Every step draws as the app's
@@ -336,9 +336,9 @@ function KitelineScreen({ s }: { s: S }) {
 					<span className="kl-attach">
 						<ImageSquareIcon />
 					</span>
-					<span className="kl-chip kl-chip--bypass">
-						<ShieldSlashIcon weight="fill" />
-						Bypass
+					<span className="kl-chip">
+						<ShieldCheckIcon weight="fill" />
+						Auto
 						<CaretDownIcon weight="bold" className="kl-chip__caret" />
 					</span>
 					<span className="kl-chip">
