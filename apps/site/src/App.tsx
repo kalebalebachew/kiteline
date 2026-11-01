@@ -1,55 +1,12 @@
-import {
-	ArrowSquareOutIcon,
-	CaretRightIcon,
-	CheckIcon,
-	CopyIcon,
-	DeviceMobileIcon,
-	type Icon,
-	LightningIcon,
-	ListBulletsIcon,
-	LockKeyIcon,
-	ShieldCheckIcon,
-	SlidersHorizontalIcon,
-} from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, CaretRightIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
+import { Features } from "./bento";
 import { KitelineDemo } from "./demo/KitelineDemo";
+import { KiteMark } from "./mark";
 import { FlyingKite, Sky } from "./sky";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
-
-const FEATURES: { icon: Icon; title: string; body: string }[] = [
-	{
-		icon: ListBulletsIcon,
-		title: "Every session, one list",
-		body: "Sessions from your terminal and from your phone, by day and by project. Open one and keep going.",
-	},
-	{
-		icon: ShieldCheckIcon,
-		title: "Approve from anywhere",
-		body: "Commands and diffs slide up as a sheet. Allow, deny with a note, or allow it for good.",
-	},
-	{
-		icon: LightningIcon,
-		title: "Live as it works",
-		body: "Replies stream in as they're written, with every command, edit and sub-agent laid out step by step.",
-	},
-	{
-		icon: SlidersHorizontalIcon,
-		title: "Your modes, your models",
-		body: "Switch between Ask, Auto-accept edits, Plan and Auto, or between Opus, Sonnet and Haiku, mid-session.",
-	},
-	{
-		icon: LockKeyIcon,
-		title: "Stays on your computer",
-		body: "Claude Code runs where your files are. Your phone reaches it over your own network or Tailscale; nothing is relayed.",
-	},
-	{
-		icon: DeviceMobileIcon,
-		title: "Feels like an app",
-		body: "Add it to your home screen. Light and dark, swipeable sheets, and it reconnects when your phone wakes.",
-	},
-];
 
 const STEPS = [
 	{ label: "Clone it and build", code: `git clone ${REPO}.git && cd kiteline\npnpm install && pnpm build` },
@@ -80,24 +37,6 @@ function CopyCode({ code }: { code: string }) {
 				{copied ? <CheckIcon weight="bold" /> : <CopyIcon weight="fill" />}
 			</button>
 		</div>
-	);
-}
-
-function KiteMark() {
-	return (
-		<svg viewBox="0 0 64 64" className="mark" aria-hidden="true">
-			<path
-				d="M27.2 42C22.5 47.5 21 50.5 17 53S11 56.5 9.5 58.5"
-				fill="none"
-				stroke="rgba(255,255,255,0.55)"
-				strokeWidth="2.4"
-				strokeLinecap="round"
-			/>
-			<g transform="translate(41.5 21.5) rotate(35)">
-				<path d="M0-17 14-5 0 25-14-5Z" fill="#fff" />
-				<path d="M0-17-14-5H0Z" fill="#cfd8e6" />
-			</g>
-		</svg>
 	);
 }
 
@@ -170,21 +109,7 @@ export function App() {
 			</section>
 
 			<main>
-				<header className="section-head" id="features">
-					<h2>Claude Code, wherever you are</h2>
-					<p>Everything you do at the terminal, from the couch, the train or the other side of the world.</p>
-				</header>
-				<section className="features">
-					{FEATURES.map(({ icon: FeatureIcon, title, body }) => (
-						<div key={title} className="feature">
-							<span className="feature__icon">
-								<FeatureIcon weight="fill" />
-							</span>
-							<h2>{title}</h2>
-							<p>{body}</p>
-						</div>
-					))}
-				</section>
+				<Features />
 
 				<section className="install" id="install">
 					<h2>Set it up in a few minutes</h2>

@@ -301,70 +301,7 @@ svg {
 	box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.05);
 }
 
-/* Below the horizon: quiet sections on the page. */
-.section-head {
-	max-width: 720px;
-	margin: 0 auto;
-	padding: 112px var(--gutter) 0;
-	text-align: center;
-}
-.section-head h2 {
-	margin: 0;
-	font-size: clamp(30px, 3.6vw, 40px);
-	font-weight: 500;
-	line-height: 1.12;
-	letter-spacing: -0.028em;
-}
-.section-head p {
-	margin: 12px auto 0;
-	max-width: 520px;
-	color: var(--muted);
-	font-size: 17px;
-}
-
-.features {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 16px;
-	max-width: 1080px;
-	margin: 0 auto;
-	padding: 56px var(--gutter) 24px;
-}
-.feature {
-	padding: 24px;
-	border-radius: 18px;
-	background: #fff;
-	box-shadow:
-		0 0 0 1px var(--line),
-		0 1px 2px rgba(15, 23, 42, 0.04);
-}
-.feature__icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 38px;
-	height: 38px;
-	border-radius: 11px;
-	background: linear-gradient(180deg, #2a73e0, #1450c4);
-	box-shadow: 0 6px 14px -6px rgba(20, 80, 196, 0.6);
-	color: #fff;
-}
-.feature__icon svg {
-	width: 18px;
-	height: 18px;
-}
-.feature h2 {
-	margin: 18px 0 0;
-	font-size: 16px;
-	font-weight: 600;
-	letter-spacing: -0.012em;
-}
-.feature p {
-	margin: 6px 0 0;
-	color: var(--muted);
-	font-size: 15px;
-}
-
+/* Below the horizon: the feature grid lives in bento.css. */
 .install {
 	max-width: 720px;
 	margin: 0 auto;
@@ -530,13 +467,6 @@ svg {
 	}
 	.frame__inner {
 		border-radius: 15px;
-	}
-	.features {
-		grid-template-columns: minmax(0, 1fr);
-		padding-top: 40px;
-	}
-	.section-head {
-		padding-top: 80px;
 	}
 	.install {
 		padding-top: 80px;
