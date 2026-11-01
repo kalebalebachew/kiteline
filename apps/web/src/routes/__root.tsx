@@ -32,7 +32,7 @@ function RootComponent() {
 	return (
 		<>
 			<HeadContent />
-			<ThemeProvider defaultTheme="dark">
+			<ThemeProvider defaultTheme="system">
 				<AuthGate>
 					<Outlet />
 				</AuthGate>

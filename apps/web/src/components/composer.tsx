@@ -1,6 +1,6 @@
 import type { PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
-import { ArrowUp, ChevronDown, Cpu, ImagePlus, Square, X } from "lucide-react";
+import { ArrowUpIcon, CaretDownIcon, CpuIcon, ImageSquareIcon, StopIcon, XIcon } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -50,7 +50,6 @@ export function Composer({
 	const prefs = usePrefs();
 	const [text, setText] = useState("");
 	const [images, setImages] = useState<Attachment[]>([]);
-	const [focused, setFocused] = useState(false);
 	const textarea = useRef<HTMLTextAreaElement>(null);
 	const fileInput = useRef<HTMLInputElement>(null);
 
@@ -117,7 +116,7 @@ export function Composer({
 	return (
 		<div className="relative">
 			{commands.length ? (
-				<div className="elevated border-border-strong bg-popover animate-in fade-in-0 slide-in-from-bottom-1 absolute right-0 bottom-full left-0 mb-2 overflow-hidden rounded-2xl border p-1.5 duration-150">
+				<div className="bg-raised shadow-float animate-in fade-in-0 slide-in-from-bottom-1 absolute right-0 bottom-full left-0 mb-2 overflow-hidden rounded-xl p-1 duration-150">
 					{commands.map((command) => (
 						<button
 							key={command}
@@ -127,7 +126,7 @@ export function Composer({
 								setText(`/${command} `);
 								textarea.current?.focus();
 							}}
-							className="hover:bg-surface-2 flex h-10 w-full items-center rounded-xl px-3 text-left font-mono text-[0.8125rem]"
+							className="hover:bg-surface-2 flex h-9 w-full items-center rounded-lg px-2.5 text-left font-mono text-[13px]"
 						>
 							<span className="text-faint">/</span>
 							{command}
@@ -136,18 +135,13 @@ export function Composer({
 				</div>
 			) : null}
 
-			<div
-				className={cn(
-					"elevated bg-surface rounded-[1.6rem] border transition-[border-color,box-shadow] duration-200",
-					focused ? "border-border-strong" : "border-border",
-				)}
-			>
+			<div className="bg-surface shadow-float rounded-[22px]">
 				{images.length ? (
 					<div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pt-3">
 						{images.map((image) => (
 							<div
 								key={image.id}
-								className="border-border relative size-16 shrink-0 overflow-hidden rounded-xl border"
+								className="bg-surface-2 relative size-16 flex-none overflow-hidden rounded-xl"
 							>
 								<img src={image.previewUrl} alt="" className="size-full object-cover" />
 								<button
@@ -157,9 +151,9 @@ export function Composer({
 										URL.revokeObjectURL(image.previewUrl);
 										setImages((current) => current.filter((i) => i.id !== image.id));
 									}}
-									className="absolute top-1 right-1 inline-flex size-5 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur"
+									className="absolute top-1 right-1 inline-flex size-5 items-center justify-center rounded-full bg-black/60 text-white"
 								>
-									<X className="size-3" />
+									<XIcon weight="bold" className="size-3" />
 								</button>
 							</div>
 						))}
@@ -171,8 +165,6 @@ export function Composer({
 					value={text}
 					onChange={(e) => setText(e.target.value)}
 					onKeyDown={onKeyDown}
-					onFocus={() => setFocused(true)}
-					onBlur={() => setFocused(false)}
 					onPaste={(e) => {
 						if (e.clipboardData.files.length) {
 							e.preventDefault();
@@ -184,10 +176,10 @@ export function Composer({
 					disabled={disabled}
 					aria-label="Message"
 					enterKeyHint={prefs.enterToSend ? "send" : "enter"}
-					className="placeholder:text-faint block max-h-[38dvh] min-h-12 w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[1rem] leading-relaxed outline-none disabled:opacity-50"
+					className="placeholder:text-faint block max-h-[38dvh] min-h-12 w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[16px] leading-relaxed outline-none focus-visible:outline-none disabled:opacity-50"
 				/>
 
-				<div className="flex items-center gap-1 px-2 pt-1 pb-2">
+				<div className="flex items-center gap-1.5 px-2.5 pt-1 pb-2.5">
 					<input
 						ref={fileInput}
 						type="file"
@@ -203,22 +195,22 @@ export function Composer({
 						type="button"
 						aria-label="Attach images"
 						onClick={() => fileInput.current?.click()}
-						className="text-muted-foreground hover:bg-surface-2 hover:text-foreground inline-flex size-9 items-center justify-center rounded-full transition-colors"
+						className="text-icon hover:bg-surface-2 hover:text-foreground inline-flex size-8 flex-none items-center justify-center rounded-full transition-colors"
 					>
-						<ImagePlus className="size-[1.15rem]" />
+						<ImageSquareIcon className="size-[18px]" />
 					</button>
 
 					<Menu>
 						<MenuTrigger
 							className={cn(
-								"border-border text-muted-foreground hover:bg-surface-2 hover:text-foreground data-popup-open:bg-surface-2 inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
-								mode === "bypassPermissions" && "border-destructive/30 text-destructive",
-								mode === "plan" && "border-aurora-2/30 text-aurora-2",
+								"bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground data-popup-open:bg-surface-3 inline-flex h-8 flex-none items-center gap-1.5 rounded-full pr-2.5 pl-3 text-[13px] font-medium transition-colors",
+								mode === "bypassPermissions" && "bg-destructive-soft text-destructive",
+								mode === "plan" && "bg-brand-soft text-brand-text",
 							)}
 						>
-							<ModeIcon className="size-3.5" />
-							{modeMeta.short}
-							<ChevronDown className="size-3 opacity-60" />
+							<ModeIcon weight="fill" className="size-3.5" />
+							<span className="trim">{modeMeta.short}</span>
+							<CaretDownIcon weight="bold" className="size-3 opacity-60" />
 						</MenuTrigger>
 						<MenuContent className="w-72">
 							<MenuRadioGroup value={mode} onValueChange={onModeChange} label="Permissions">
@@ -228,7 +220,7 @@ export function Composer({
 										value={m.id}
 										title={m.title}
 										description={m.description}
-										icon={<m.icon className="size-4" />}
+										icon={<m.icon weight="fill" className="size-4" />}
 										tone={m.id === "bypassPermissions" ? "danger" : undefined}
 									/>
 								))}
@@ -237,10 +229,10 @@ export function Composer({
 					</Menu>
 
 					<Menu>
-						<MenuTrigger className="border-border text-muted-foreground hover:bg-surface-2 hover:text-foreground data-popup-open:bg-surface-2 inline-flex h-8 max-w-[9rem] items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors">
-							<Cpu className="size-3.5 shrink-0" />
+						<MenuTrigger className="bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground data-popup-open:bg-surface-3 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full pr-2.5 pl-3 text-[13px] font-medium transition-colors">
+							<CpuIcon weight="fill" className="size-3.5 flex-none" />
 							<span className="truncate">{modelLabel(modelInUse ?? model)}</span>
-							<ChevronDown className="size-3 shrink-0 opacity-60" />
+							<CaretDownIcon weight="bold" className="size-3 flex-none opacity-60" />
 						</MenuTrigger>
 						<MenuContent className="w-64">
 							<MenuRadioGroup
@@ -260,7 +252,7 @@ export function Composer({
 						</MenuContent>
 					</Menu>
 
-					<div className="ml-auto">
+					<div className="ml-auto flex-none">
 						{showStop ? (
 							<button
 								type="button"
@@ -268,7 +260,7 @@ export function Composer({
 								onClick={onStop}
 								className="bg-foreground text-background inline-flex size-9 items-center justify-center rounded-full transition-transform active:scale-95"
 							>
-								<Square className="size-3.5 fill-current" />
+								<StopIcon weight="fill" className="size-3.5" />
 							</button>
 						) : (
 							<button
@@ -277,16 +269,14 @@ export function Composer({
 								disabled={!canSend}
 								onClick={() => void submit()}
 								className={cn(
-									"inline-flex size-9 items-center justify-center rounded-full transition-[transform,opacity,background-color] duration-150 active:scale-95",
-									canSend
-										? "aurora text-[oklch(0.16_0.02_268)] shadow-[0_4px_16px_-4px_color-mix(in_oklch,var(--aurora-2)_70%,transparent)]"
-										: "bg-surface-3 text-faint",
+									"inline-flex size-9 items-center justify-center rounded-full transition-[transform,background-color,color] duration-150 active:scale-95",
+									canSend ? "bg-foreground text-background" : "bg-surface-2 text-faint",
 								)}
 							>
 								{sending ? (
 									<span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
 								) : (
-									<ArrowUp className="size-[1.1rem]" strokeWidth={2.5} />
+									<ArrowUpIcon weight="bold" className="size-4" />
 								)}
 							</button>
 						)}

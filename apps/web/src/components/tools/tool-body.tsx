@@ -1,7 +1,8 @@
 import type { ToolResult } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
-import { Check, Circle, CircleDot, ImageIcon } from "lucide-react";
+import { CheckCircleIcon, CircleDashedIcon, CircleIcon, ImageSquareIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+
 import { relativeTo } from "@/lib/format";
 import { grammarForPath } from "@/lib/highlight";
 
@@ -13,11 +14,12 @@ import { editPairs, type Tool } from "./describe";
 
 const str = (value: unknown) => (typeof value === "string" ? value : "");
 
+/** A quiet well: a fill, not a bordered box inside a bordered box. */
 function Section({ label, children, action }: { label: string; children: ReactNode; action?: ReactNode }) {
 	return (
-		<div className="border-border bg-surface overflow-hidden rounded-xl border">
-			<div className="border-border bg-surface-2/50 flex h-7 items-center justify-between border-b pr-1 pl-3">
-				<span className="text-faint text-[0.68rem] font-medium tracking-wide uppercase">{label}</span>
+		<div className="bg-surface-2 overflow-hidden rounded-xl">
+			<div className="flex h-8 items-center justify-between pr-1 pl-3.5">
+				<span className="text-faint truncate text-[12px]">{label}</span>
 				{action}
 			</div>
 			{children}
@@ -33,11 +35,11 @@ export function Output({ result, label = "Output" }: { result: ToolResult; label
 			action={empty ? undefined : <CopyButton text={result.text} label="Copy output" />}
 		>
 			{empty ? (
-				<p className="text-faint px-3 py-2 text-xs">{result.images ? "" : "No output"}</p>
+				<p className="text-faint px-3.5 pb-3 text-[13px]">{result.images ? "" : "No output"}</p>
 			) : (
 				<pre
 					className={cn(
-						"max-h-80 overflow-auto px-3 py-2.5 font-mono text-[0.74rem] leading-relaxed break-words whitespace-pre-wrap",
+						"max-h-80 overflow-auto px-3.5 pt-0.5 pb-3 font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap",
 						result.isError ? "text-destructive" : "text-muted-foreground",
 					)}
 				>
@@ -45,8 +47,8 @@ export function Output({ result, label = "Output" }: { result: ToolResult; label
 				</pre>
 			)}
 			{result.images ? (
-				<p className="border-border text-faint flex items-center gap-1.5 border-t px-3 py-1.5 text-xs">
-					<ImageIcon className="size-3.5" />
+				<p className="text-faint flex items-center gap-1.5 px-3.5 pb-3 text-[13px]">
+					<ImageSquareIcon weight="fill" className="size-3.5" />
 					{result.images} {result.images === 1 ? "image" : "images"}
 				</p>
 			) : null}
@@ -60,35 +62,30 @@ export function TodoList({ tool }: { tool: Tool }) {
 		: [];
 	const done = todos.filter((t) => t.status === "completed").length;
 	return (
-		<div className="border-border bg-surface rounded-2xl border p-3.5">
-			<div className="mb-2.5 flex items-center justify-between">
-				<span className="text-[0.8125rem] font-medium">Plan</span>
-				<span className="text-faint text-xs tabular-nums">
-					{done}/{todos.length} done
+		<div className="bg-surface shadow-card rounded-2xl p-4">
+			<div className="mb-3 flex items-baseline justify-between gap-3">
+				<span className="text-[14px] font-semibold">Plan</span>
+				<span className="text-faint text-[13px] tabular-nums">
+					{done} of {todos.length}
 				</span>
 			</div>
-			<div className="bg-surface-3 mb-3 h-1 overflow-hidden rounded-full">
-				<div
-					className="aurora h-full rounded-full transition-[width] duration-500 ease-out"
-					style={{ width: `${todos.length ? (done / todos.length) * 100 : 0}%` }}
-				/>
-			</div>
-			<ul className="space-y-1.5">
+			<ul className="space-y-2">
 				{todos.map((todo, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: todo text can repeat; order is the identity.
-					<li key={`${i}-${todo.content}`} className="flex items-start gap-2.5 text-[0.8125rem] leading-snug">
+					<li key={`${i}-${todo.content}`} className="flex items-start gap-2.5 text-[14px] leading-snug">
 						{todo.status === "completed" ? (
-							<span className="bg-success/15 text-success mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full">
-								<Check className="size-3" strokeWidth={3} />
-							</span>
+							<CheckCircleIcon weight="fill" className="text-success mt-px size-4 flex-none" />
 						) : todo.status === "in_progress" ? (
-							<CircleDot className="text-aurora-1 mt-0.5 size-4 shrink-0" />
+							<CircleDashedIcon
+								weight="bold"
+								className="text-brand mt-px size-4 flex-none animate-spin [animation-duration:3s]"
+							/>
 						) : (
-							<Circle className="text-faint mt-0.5 size-4 shrink-0" />
+							<CircleIcon className="text-faint mt-px size-4 flex-none" />
 						)}
 						<span
 							className={cn(
-								todo.status === "completed" && "text-faint decoration-faint/50 line-through",
+								todo.status === "completed" && "text-faint decoration-faint/60 line-through",
 								todo.status === "in_progress" && "font-medium",
 							)}
 						>
@@ -128,7 +125,7 @@ export function ToolBody({ tool, cwd, children }: { tool: Tool; cwd: string | nu
 							key={`${i}-${pair.before.length}`}
 							label={i === 0 ? relativeTo(path, cwd) : `Edit ${i + 1}`}
 						>
-							<DiffView before={pair.before} after={pair.after} />
+							<DiffView before={pair.before} after={pair.after} className="pb-2" />
 						</Section>
 					))}
 					{result?.isError ? <Output result={result} /> : null}
@@ -152,7 +149,7 @@ export function ToolBody({ tool, cwd, children }: { tool: Tool; cwd: string | nu
 				<div className="space-y-2">
 					{str(input.prompt) ? (
 						<Section label="Brief">
-							<p className="text-muted-foreground max-h-48 overflow-auto px-3 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-wrap">
+							<p className="text-muted-foreground max-h-48 overflow-auto px-3.5 pb-3 text-[13px] leading-relaxed whitespace-pre-wrap">
 								{str(input.prompt)}
 							</p>
 						</Section>
@@ -160,26 +157,26 @@ export function ToolBody({ tool, cwd, children }: { tool: Tool; cwd: string | nu
 					{children}
 					{result ? (
 						<Section label="Report">
-							<Markdown text={result.text} className="px-3 py-2.5 text-[0.875rem]" />
+							<Markdown text={result.text} className="px-3.5 pb-3 text-[14px]" />
 						</Section>
 					) : null}
 				</div>
 			);
 		case "ExitPlanMode":
 			return (
-				<Section label="Plan">
-					<Markdown text={str(input.plan) || result?.text || ""} className="px-3.5 py-3 text-[0.875rem]" />
-				</Section>
+				<div className="bg-surface-2 rounded-xl px-4 py-3.5">
+					<Markdown text={str(input.plan) || result?.text || ""} className="text-[14px]" />
+				</div>
 			);
 		case "WebFetch":
 			return (
 				<div className="space-y-2">
-					<Section label="URL" action={<CopyButton text={str(input.url)} label="Copy URL" />}>
+					<Section label="Link" action={<CopyButton text={str(input.url)} label="Copy link" />}>
 						<a
 							href={str(input.url)}
 							target="_blank"
 							rel="noreferrer noopener"
-							className="text-aurora-1 block truncate px-3 py-2 font-mono text-xs"
+							className="text-brand-text block truncate px-3.5 pb-3 text-[13px]"
 						>
 							{str(input.url)}
 						</a>
@@ -205,5 +202,5 @@ export function ToolBody({ tool, cwd, children }: { tool: Tool; cwd: string | nu
 }
 
 function PendingNote() {
-	return <p className="text-faint px-1 text-xs">Waiting for a result…</p>;
+	return <p className="text-faint text-[13px]">Waiting for a result…</p>;
 }

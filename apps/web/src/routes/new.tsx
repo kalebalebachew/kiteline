@@ -1,8 +1,14 @@
 import type { PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
+import {
+	CaretLeftIcon,
+	CheckIcon,
+	FolderOpenIcon,
+	FolderSimpleIcon,
+	MagnifyingGlassIcon,
+} from "@phosphor-icons/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { Check, ChevronLeft, FolderClosed, FolderOpen, FolderSearch } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Composer, type ComposerSubmit } from "@/components/composer";
@@ -54,99 +60,90 @@ function NewSession() {
 		},
 	});
 
+	const rows = [
+		...projects,
+		...(cwd && !projects.some((p) => p.cwd === cwd) ? [{ cwd, lastModified: null as number | null }] : []),
+	];
+
 	return (
-		<div className="relative flex min-h-dvh flex-col">
-			<div className="halo pointer-events-none absolute inset-x-0 top-0 h-72" />
+		<div className="flex min-h-dvh flex-col">
 			<header className="pt-safe sticky top-0 z-30">
 				<div className="mx-auto flex h-14 max-w-2xl items-center px-2">
 					<button
 						type="button"
 						aria-label="Back"
 						onClick={() => (window.history.length > 1 ? router.history.back() : router.navigate({ to: "/" }))}
-						className="text-muted-foreground hover:bg-surface-2 hover:text-foreground inline-flex size-10 items-center justify-center rounded-full"
+						className="text-icon hover:bg-surface-2 hover:text-foreground inline-flex size-10 items-center justify-center rounded-full transition-colors"
 					>
-						<ChevronLeft className="size-5" />
+						<CaretLeftIcon weight="bold" className="size-[18px]" />
 					</button>
 				</div>
 			</header>
 
-			<main className="relative mx-auto w-full max-w-2xl flex-1 px-4 pb-6">
-				<h1 className="font-display text-[2.5rem] leading-[1.04] tracking-tight">
-					What are we
-					<br />
-					<span className="italic">building?</span>
-				</h1>
-				<p className="text-muted-foreground mt-2 text-[0.9375rem]">
+			<main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-6">
+				<h1 className="text-[28px] leading-tight font-semibold tracking-[-0.025em]">New session</h1>
+				<p className="text-muted-foreground mt-1 text-[15px]">
 					Pick a project on {system.data?.hostname ?? "your computer"}, then say what you need.
 				</p>
 
-				<h2 className="text-faint mt-8 mb-2 px-1 text-[0.72rem] font-medium tracking-[0.08em] uppercase">
-					Project
-				</h2>
-				<div className="border-border bg-surface overflow-hidden rounded-2xl border">
-					{projects.map((project, i) => {
+				<h2 className="text-muted-foreground mt-7 mb-2 px-1 text-[13px] font-medium">Project</h2>
+				<div className="bg-surface shadow-card overflow-hidden rounded-2xl">
+					{rows.map((project, i) => {
 						const active = project.cwd === selected;
 						return (
 							<button
 								key={project.cwd}
 								type="button"
 								onClick={() => setCwd(project.cwd)}
-								className={cn(
-									"flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
-									i && "border-border border-t",
-									active ? "bg-aurora-1/8" : "active:bg-surface-2",
-								)}
+								className="active:bg-surface-2 flex w-full items-center gap-3 pl-4 text-left transition-colors"
 							>
+								<FolderSimpleIcon
+									weight="fill"
+									className={cn("size-[18px] flex-none", active ? "text-brand" : "text-icon")}
+								/>
 								<span
 									className={cn(
-										"inline-flex size-9 shrink-0 items-center justify-center rounded-xl border",
-										active
-											? "aurora border-transparent text-[oklch(0.16_0.02_268)]"
-											: "border-border text-faint",
+										"flex min-w-0 flex-1 items-center gap-3 py-3 pr-4",
+										i && "border-border border-t",
 									)}
 								>
-									<FolderClosed className="size-4" />
-								</span>
-								<span className="min-w-0 flex-1">
-									<span className="block truncate text-[0.9375rem] font-medium">{baseName(project.cwd)}</span>
-									<span className="text-muted-foreground block truncate text-xs">
-										{tildify(project.cwd)}
-										{project.lastModified ? ` · ${relativeTime(project.lastModified)}` : ""}
+									<span className="min-w-0 flex-1">
+										<span className="block truncate text-[15px] leading-snug font-medium">
+											{baseName(project.cwd)}
+										</span>
+										<span className="text-muted-foreground mt-0.5 block truncate text-[13px]">
+											{tildify(project.cwd)}
+											{project.lastModified ? ` · ${relativeTime(project.lastModified)}` : ""}
+										</span>
 									</span>
+									{active ? <CheckIcon weight="bold" className="text-brand size-4 flex-none" /> : null}
 								</span>
-								{active ? <Check className="text-aurora-1 size-4 shrink-0" /> : null}
 							</button>
 						);
 					})}
-					{cwd && !projects.some((p) => p.cwd === cwd) ? (
-						<div className="border-border bg-aurora-1/8 flex items-center gap-3 border-t px-4 py-3">
-							<span className="aurora inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-[oklch(0.16_0.02_268)]">
-								<FolderOpen className="size-4" />
-							</span>
-							<span className="min-w-0 flex-1">
-								<span className="block truncate text-[0.9375rem] font-medium">{baseName(cwd)}</span>
-								<span className="text-muted-foreground block truncate text-xs">{tildify(cwd)}</span>
-							</span>
-							<Check className="text-aurora-1 size-4 shrink-0" />
-						</div>
-					) : null}
 					<button
 						type="button"
 						onClick={() => setPicking(true)}
-						className={cn(
-							"text-muted-foreground active:bg-surface-2 flex w-full items-center gap-3 px-4 py-3 text-left text-[0.9375rem] font-medium",
-							(projects.length > 0 || cwd) && "border-border border-t",
-						)}
+						className="active:bg-surface-2 flex w-full items-center gap-3 pl-4 text-left transition-colors"
 					>
-						<span className="border-border-strong inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-dashed">
-							<FolderSearch className="size-4" />
+						{rows.length ? (
+							<FolderOpenIcon weight="fill" className="text-icon size-[18px] flex-none" />
+						) : (
+							<MagnifyingGlassIcon weight="bold" className="text-icon size-[18px] flex-none" />
+						)}
+						<span
+							className={cn(
+								"text-muted-foreground flex-1 py-3.5 pr-4 text-[15px] font-medium",
+								rows.length > 0 && "border-border border-t",
+							)}
+						>
+							Browse folders…
 						</span>
-						Browse folders…
 					</button>
 				</div>
 			</main>
 
-			<div className="from-background via-background to-background/0 sticky bottom-0 z-20 bg-gradient-to-t pt-6">
+			<div className="from-background via-background to-background/0 sticky bottom-0 z-20 bg-gradient-to-t via-70% pt-8">
 				<div className="mx-auto w-full max-w-2xl px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
 					<Composer
 						autoFocus
@@ -160,9 +157,7 @@ function NewSession() {
 						}}
 						sending={start.isPending}
 						disabled={!selected}
-						placeholder={
-							selected ? `What should Claude Code do in ${baseName(selected)}?` : "Pick a folder first"
-						}
+						placeholder={selected ? "What should Claude Code do?" : "Pick a folder first"}
 						mode={mode}
 						onModeChange={(m) => {
 							setMode(m);

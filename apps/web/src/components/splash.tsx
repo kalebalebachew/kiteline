@@ -1,30 +1,26 @@
+import { Button } from "@kiteline/ui/components/button";
+
 import { KiteMark } from "./brand";
 
 export function Splash() {
 	return (
 		<div className="flex min-h-dvh items-center justify-center">
-			<KiteMark live className="animate-breathe size-10" />
+			<KiteMark live className="text-icon size-9" />
 		</div>
 	);
 }
 
 export function Offline({ onRetry }: { onRetry: () => void }) {
 	return (
-		<div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-8 text-center">
-			<KiteMark className="size-12 opacity-50 grayscale" />
-			<div>
-				<h1 className="font-display text-3xl tracking-tight">Can't reach your computer</h1>
-				<p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-					Check that Kiteline is still running there and that this phone is on the same network or tailnet.
-				</p>
-			</div>
-			<button
-				type="button"
-				onClick={onRetry}
-				className="border-border-strong hover:bg-surface-2 h-10 rounded-xl border px-4 text-sm font-medium"
-			>
+		<div className="flex min-h-dvh flex-col items-center justify-center px-8 text-center">
+			<KiteMark className="text-faint size-10" />
+			<h1 className="mt-5 text-[20px] font-semibold tracking-[-0.02em]">Can't reach your computer</h1>
+			<p className="text-muted-foreground mt-1.5 max-w-xs text-[14px] leading-relaxed">
+				Check that Kiteline is still running there, and that Tailscale is on on this phone.
+			</p>
+			<Button variant="secondary" className="mt-6" onClick={onRetry}>
 				Try again
-			</button>
+			</Button>
 		</div>
 	);
 }

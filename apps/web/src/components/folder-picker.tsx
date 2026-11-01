@@ -1,8 +1,14 @@
 import { Button } from "@kiteline/ui/components/button";
 import { Sheet } from "@kiteline/ui/components/sheet";
 import { cn } from "@kiteline/ui/lib/utils";
+import {
+	ArrowUpIcon,
+	CaretRightIcon,
+	FolderSimpleIcon,
+	GitBranchIcon,
+	HouseIcon,
+} from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Folder, FolderGit2, Home } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { tildify } from "@/lib/format";
@@ -36,10 +42,9 @@ export function FolderPicker({
 			open={open}
 			onOpenChange={onOpenChange}
 			title="Choose a folder"
-			description={data ? <span className="font-mono text-xs">{tildify(data.path)}</span> : "Loading…"}
+			description={data ? <span className="font-mono text-[13px]">{tildify(data.path)}</span> : "Loading…"}
 			footer={
 				<Button
-					variant="aurora"
 					size="lg"
 					className="w-full"
 					disabled={!data}
@@ -52,48 +57,39 @@ export function FolderPicker({
 				</Button>
 			}
 		>
-			<div className="mb-2 flex gap-1.5">
-				<button
-					type="button"
+			<div className="mb-3 flex gap-2">
+				<Button
+					variant="secondary"
+					size="sm"
 					disabled={!data?.parent}
 					onClick={() => data?.parent && setPath(data.parent)}
-					className="border-border text-muted-foreground inline-flex h-9 items-center gap-1 rounded-xl border px-3 text-[0.8125rem] font-medium disabled:opacity-40"
 				>
-					<ChevronLeft className="size-4" />
+					<ArrowUpIcon weight="bold" className="size-3.5" />
 					Up
-				</button>
-				<button
-					type="button"
-					onClick={() => setPath(data?.home)}
-					className="border-border text-muted-foreground inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[0.8125rem] font-medium"
-				>
-					<Home className="size-4" />
+				</Button>
+				<Button variant="secondary" size="sm" onClick={() => setPath(data?.home)}>
+					<HouseIcon weight="fill" className="size-3.5" />
 					Home
-				</button>
+				</Button>
 			</div>
-			<div
-				className={cn("border-border overflow-hidden rounded-2xl border", dirs.isFetching && "opacity-70")}
-			>
+			<div className={cn("-mx-2 transition-opacity", dirs.isFetching && "opacity-60")}>
 				{data?.dirs.length === 0 ? (
-					<p className="text-faint px-4 py-6 text-center text-sm">No folders in here</p>
+					<p className="text-faint px-2 py-8 text-center text-[14px]">No folders in here</p>
 				) : null}
-				{data?.dirs.map((dir, i) => (
+				{data?.dirs.map((dir) => (
 					<button
 						key={dir.path}
 						type="button"
 						onClick={() => setPath(dir.path)}
-						className={cn(
-							"active:bg-surface-2 flex h-12 w-full items-center gap-3 px-4 text-left text-[0.9375rem]",
-							i && "border-border border-t",
-						)}
+						className="hover:bg-surface-2 active:bg-surface-2 flex h-11 w-full items-center gap-3 rounded-lg px-2 text-left text-[15px]"
 					>
 						{dir.isGit ? (
-							<FolderGit2 className="text-aurora-1 size-4 shrink-0" />
+							<GitBranchIcon weight="fill" className="text-icon size-4 flex-none" />
 						) : (
-							<Folder className="text-faint size-4 shrink-0" />
+							<FolderSimpleIcon weight="fill" className="text-icon size-4 flex-none" />
 						)}
 						<span className="min-w-0 flex-1 truncate">{dir.name}</span>
-						<ChevronRight className="text-faint size-4 shrink-0" />
+						<CaretRightIcon weight="bold" className="text-faint size-3 flex-none" />
 					</button>
 				))}
 			</div>

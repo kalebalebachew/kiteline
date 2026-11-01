@@ -1,25 +1,25 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     />
-    <meta name="theme-color" content="#121319" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#fafbfd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fdfdfc" media="(prefers-color-scheme: light)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Kiteline" />
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <title>Kiteline</title>
     <script>
       (() => {
-        let theme = "dark";
+        let theme = "system";
         try {
-          theme = localStorage.getItem("kiteline-theme") || "dark";
+          theme = localStorage.getItem("kiteline-theme") || "system";
         } catch {}
         const dark = theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.toggle("dark", dark);

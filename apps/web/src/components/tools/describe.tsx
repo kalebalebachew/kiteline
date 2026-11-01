@@ -1,23 +1,23 @@
 import type { Item } from "@kiteline/api/agent/types";
 import {
-	BookOpenText,
-	Bot,
-	ClipboardList,
-	FilePen,
-	FilePlus2,
-	FileText,
-	FolderSearch,
-	Globe,
-	ListChecks,
-	type LucideIcon,
-	MessageCircleQuestion,
-	NotebookPen,
-	Plug,
-	Search,
-	Sparkles,
-	SquareTerminal,
-	Wrench,
-} from "lucide-react";
+	BookOpenTextIcon,
+	ChatCircleDotsIcon,
+	ClipboardTextIcon,
+	FilePlusIcon,
+	FileTextIcon,
+	FolderOpenIcon,
+	GlobeIcon,
+	type Icon,
+	ListChecksIcon,
+	MagnifyingGlassIcon,
+	NotebookIcon,
+	NotePencilIcon,
+	PlugIcon,
+	PuzzlePieceIcon,
+	RobotIcon,
+	TerminalWindowIcon,
+	WrenchIcon,
+} from "@phosphor-icons/react";
 
 import { baseName, relativeTo } from "@/lib/format";
 
@@ -26,7 +26,7 @@ import { diffStats } from "../diff-view";
 export type Tool = Extract<Item, { kind: "tool" }>;
 
 export type ToolSummary = {
-	icon: LucideIcon;
+	icon: Icon;
 	/** Short verb-ish label: "Ran", "Edited", "Read". */
 	verb: string;
 	/** The object of the action: a path, a command, a query. */
@@ -69,7 +69,7 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 		case "PowerShell": {
 			const command = str(input.command);
 			return {
-				icon: SquareTerminal,
+				icon: TerminalWindowIcon,
 				verb: str(input.description) ? "" : "Ran",
 				target: str(input.description) || firstLine(command),
 				mono: !str(input.description),
@@ -81,7 +81,7 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 			const limit = typeof input.limit === "number" ? input.limit : null;
 			const range = offset || limit ? `lines ${offset ?? 1}–${(offset ?? 1) + (limit ?? 0)}` : null;
 			return {
-				icon: FileText,
+				icon: FileTextIcon,
 				verb: "Read",
 				target: rel,
 				mono: true,
@@ -98,7 +98,7 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 				removed += stats.removed;
 			}
 			return {
-				icon: FilePen,
+				icon: NotePencilIcon,
 				verb: "Edited",
 				target: rel,
 				mono: true,
@@ -110,17 +110,17 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 		}
 		case "Write":
 			return {
-				icon: FilePlus2,
+				icon: FilePlusIcon,
 				verb: "Wrote",
 				target: rel,
 				mono: true,
 				meta: [{ text: `+${lineCount(str(input.content))}`, tone: "add" }],
 			};
 		case "NotebookEdit":
-			return { icon: NotebookPen, verb: "Edited notebook", target: rel, mono: true };
+			return { icon: NotebookIcon, verb: "Edited notebook", target: rel, mono: true };
 		case "Grep":
 			return {
-				icon: Search,
+				icon: MagnifyingGlassIcon,
 				verb: "Searched",
 				target: `“${str(input.pattern)}”${rel ? ` in ${rel}` : ""}`,
 				meta:
@@ -130,7 +130,7 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 			};
 		case "Glob":
 			return {
-				icon: FolderSearch,
+				icon: FolderOpenIcon,
 				verb: "Found",
 				target: str(input.pattern),
 				mono: true,
@@ -146,49 +146,49 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 			} catch {
 				// Keep the raw value.
 			}
-			return { icon: Globe, verb: "Fetched", target: host };
+			return { icon: GlobeIcon, verb: "Fetched", target: host };
 		}
 		case "WebSearch":
-			return { icon: Globe, verb: "Searched the web for", target: `“${str(input.query)}”` };
+			return { icon: GlobeIcon, verb: "Searched the web for", target: `“${str(input.query)}”` };
 		case "TodoWrite":
-			return { icon: ListChecks, verb: "Updated", target: "the plan" };
+			return { icon: ListChecksIcon, verb: "Updated", target: "the plan" };
 		case "Task":
 		case "Agent":
 			return {
-				icon: Bot,
+				icon: RobotIcon,
 				verb: str(input.subagent_type) ? `${str(input.subagent_type)} agent` : "Agent",
 				target: str(input.description) || firstLine(str(input.prompt), 80),
 			};
 		case "AskUserQuestion": {
 			const questions = Array.isArray(input.questions) ? (input.questions as { question?: string }[]) : [];
-			return { icon: MessageCircleQuestion, verb: "Asked", target: questions[0]?.question ?? "a question" };
+			return { icon: ChatCircleDotsIcon, verb: "Asked", target: questions[0]?.question ?? "a question" };
 		}
 		case "ExitPlanMode":
-			return { icon: ClipboardList, verb: "Proposed", target: "a plan" };
+			return { icon: ClipboardTextIcon, verb: "Proposed", target: "a plan" };
 		case "Skill":
-			return { icon: Sparkles, verb: "Used skill", target: str(input.skill) || str(input.command) };
+			return { icon: PuzzlePieceIcon, verb: "Used skill", target: str(input.skill) || str(input.command) };
 		case "ToolSearch":
-			return { icon: BookOpenText, verb: "Looked up", target: "tools" };
+			return { icon: BookOpenTextIcon, verb: "Looked up", target: "tools" };
 		case "TaskCreate":
-			return { icon: ListChecks, verb: "Added task", target: str(input.subject) };
+			return { icon: ListChecksIcon, verb: "Added task", target: str(input.subject) };
 		case "TaskUpdate": {
 			const status = str(input.status).replace("_", " ");
 			return {
-				icon: ListChecks,
+				icon: ListChecksIcon,
 				verb: status === "completed" ? "Finished task" : status ? `Marked task ${status}` : "Updated task",
 				target: str(input.subject) || `#${str(input.taskId)}`,
 			};
 		}
 		case "TaskList":
 		case "TaskGet":
-			return { icon: ListChecks, verb: "Checked", target: "tasks" };
+			return { icon: ListChecksIcon, verb: "Checked", target: "tasks" };
 	}
 
 	if (tool.name.startsWith("mcp__")) {
 		const [, server = "", name = ""] = tool.name.split("__");
-		return { icon: Plug, verb: server.replaceAll("_", " "), target: name.replaceAll("_", " ") };
+		return { icon: PlugIcon, verb: server.replaceAll("_", " "), target: name.replaceAll("_", " ") };
 	}
-	return { icon: Wrench, verb: tool.name, target: path ? baseName(path) : "" };
+	return { icon: WrenchIcon, verb: tool.name, target: path ? baseName(path) : "" };
 }
 
 function countLabel(text: string) {

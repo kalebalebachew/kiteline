@@ -1,4 +1,10 @@
-import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from "lucide-react";
+import {
+	CheckCircleIcon,
+	InfoIcon,
+	SpinnerGapIcon,
+	WarningCircleIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
 import type * as React from "react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
@@ -6,18 +12,18 @@ const Toaster = (props: ToasterProps) => (
 	<Sonner
 		className="toaster group"
 		icons={{
-			success: <CircleCheckIcon className="size-4" />,
-			info: <InfoIcon className="size-4" />,
-			warning: <TriangleAlertIcon className="size-4" />,
-			error: <OctagonXIcon className="size-4" />,
-			loading: <Loader2Icon className="size-4 animate-spin" />,
+			success: <CheckCircleIcon weight="fill" className="text-success size-4" />,
+			info: <InfoIcon weight="fill" className="text-icon size-4" />,
+			warning: <WarningIcon weight="fill" className="text-warning size-4" />,
+			error: <WarningCircleIcon weight="fill" className="text-destructive size-4" />,
+			loading: <SpinnerGapIcon className="text-icon size-4 animate-spin" />,
 		}}
 		style={
 			{
-				"--normal-bg": "var(--popover)",
-				"--normal-text": "var(--popover-foreground)",
-				"--normal-border": "var(--border-strong)",
-				"--border-radius": "1rem",
+				"--normal-bg": "var(--raised)",
+				"--normal-text": "var(--foreground)",
+				"--normal-border": "var(--border)",
+				"--border-radius": "12px",
 			} as React.CSSProperties
 		}
 		{...props}

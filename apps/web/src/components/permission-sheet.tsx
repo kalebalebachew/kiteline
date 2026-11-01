@@ -2,7 +2,7 @@ import type { PermissionDecision, PermissionRequest } from "@kiteline/api/agent/
 import { Button } from "@kiteline/ui/components/button";
 import { Sheet } from "@kiteline/ui/components/sheet";
 import { cn } from "@kiteline/ui/lib/utils";
-import { Check, ShieldAlert } from "lucide-react";
+import { CheckIcon, ShieldWarningIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
 import { describeTool, type Tool } from "./tools/describe";
@@ -27,6 +27,9 @@ type Props = {
 function asTool(request: PermissionRequest): Tool {
 	return { kind: "tool", id: request.id, name: request.toolName, input: request.input, parent: null };
 }
+
+const fieldClass =
+	"w-full rounded-xl bg-surface-2 px-3.5 text-[16px] outline-none placeholder:text-faint focus-visible:bg-surface-3 focus-visible:outline-none";
 
 export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDecide }: Props) {
 	const [busy, setBusy] = useState<string | null>(null);
@@ -61,14 +64,10 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 	const counter = queued > 1 ? `1 of ${queued}` : null;
 
 	const eyebrow = (
-		<div className="flex items-center gap-2">
-			<span className="border-warning/30 bg-warning/10 text-warning inline-flex size-8 items-center justify-center rounded-xl border">
-				<Icon className="size-4" />
-			</span>
-			<span className="text-warning text-xs font-medium">
-				{request.fromSubagent ? "A sub-agent needs you" : "Claude Code needs you"}
-			</span>
-			{counter ? <span className="text-faint ml-auto text-xs tabular-nums">{counter}</span> : null}
+		<div className="text-warning flex items-center gap-2 text-[13px] font-medium">
+			<Icon weight="fill" className="size-4 flex-none" />
+			<span>{request.fromSubagent ? "A sub-agent needs you" : "Claude Code needs you"}</span>
+			{counter ? <span className="text-faint ml-auto font-normal tabular-nums">{counter}</span> : null}
 		</div>
 	);
 
@@ -96,7 +95,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 				footer={
 					<div className="flex gap-2">
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="lg"
 							className="flex-1"
 							disabled={!!busy}
@@ -110,7 +109,6 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 							Skip
 						</Button>
 						<Button
-							variant="aurora"
 							size="lg"
 							className="flex-[2]"
 							disabled={!answered || !!busy}
@@ -136,7 +134,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 					{questions.map((q) => (
 						<fieldset key={q.question} className="space-y-2">
 							{questions.length > 1 ? (
-								<legend className="mb-2 text-sm font-medium">
+								<legend className="mb-2 text-[14px] font-medium">
 									{q.header ? <span className="text-faint mr-1.5">{q.header} ·</span> : null}
 									{q.question}
 								</legend>
@@ -149,27 +147,25 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 										type="button"
 										onClick={() => toggle(q, option.label)}
 										className={cn(
-											"flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left transition-colors",
+											"flex w-full items-start gap-3 rounded-xl p-3.5 text-left transition-[background-color,box-shadow]",
 											selected
-												? "border-aurora-1/60 bg-aurora-1/8"
-												: "border-border bg-surface hover:bg-surface-2",
+												? "bg-brand-soft shadow-[inset_0_0_0_1.5px_var(--brand)]"
+												: "bg-surface-2 hover:bg-surface-3",
 										)}
 									>
 										<span
 											className={cn(
-												"mt-0.5 inline-flex size-5 shrink-0 items-center justify-center border",
+												"mt-px inline-flex size-5 flex-none items-center justify-center",
 												q.multiSelect ? "rounded-md" : "rounded-full",
-												selected
-													? "aurora border-transparent text-[oklch(0.16_0.02_268)]"
-													: "border-border-strong",
+												selected ? "bg-brand text-white" : "shadow-[inset_0_0_0_1.5px_var(--border-strong)]",
 											)}
 										>
-											{selected ? <Check className="size-3.5" strokeWidth={3} /> : null}
+											{selected ? <CheckIcon weight="bold" className="size-3" /> : null}
 										</span>
 										<span className="min-w-0">
-											<span className="block text-[0.9375rem] font-medium">{option.label}</span>
+											<span className="block text-[15px] leading-snug font-medium">{option.label}</span>
 											{option.description ? (
-												<span className="text-muted-foreground mt-0.5 block text-[0.8125rem] leading-snug">
+												<span className="text-muted-foreground mt-0.5 block text-[13px] leading-snug">
 													{option.description}
 												</span>
 											) : null}
@@ -181,7 +177,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 								value={other[q.question] ?? ""}
 								onChange={(e) => setOther((current) => ({ ...current, [q.question]: e.target.value }))}
 								placeholder="Something else…"
-								className="border-border bg-surface placeholder:text-faint focus:border-border-strong h-12 w-full rounded-2xl border px-3.5 text-[0.9375rem] outline-none"
+								className={cn(fieldClass, "h-12")}
 							/>
 						</fieldset>
 					))}
@@ -193,7 +189,8 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 	const isPlan = request.toolName === "ExitPlanMode";
 	const title = isPlan ? "Review the plan" : request.title || askFor(tool, summary.target);
 	const said = request.description || request.decisionReason || stringField(request.input.description);
-	const description = said && said !== title ? said : undefined;
+	const description = said && !title.includes(said) ? said : undefined;
+	const denyLabel = showFeedback ? (isPlan ? "Send feedback" : "Deny") : isPlan ? "Keep planning" : "Deny";
 
 	return (
 		<Sheet
@@ -203,7 +200,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 			title={title}
 			description={description}
 			footer={
-				<div className="space-y-2.5">
+				<div className="space-y-2">
 					{showFeedback ? (
 						<textarea
 							value={feedback}
@@ -212,12 +209,12 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 							placeholder={
 								isPlan ? "What should change in the plan?" : "Tell Claude what to do instead (optional)"
 							}
-							className="border-border bg-surface placeholder:text-faint focus:border-border-strong block w-full resize-none rounded-2xl border px-3.5 py-3 text-[0.9375rem] outline-none"
+							className={cn(fieldClass, "block resize-none py-3")}
 						/>
 					) : null}
 					<div className="flex gap-2">
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="lg"
 							className="flex-1"
 							disabled={!!busy}
@@ -229,18 +226,9 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 								void decide("deny", { behavior: "deny", message: feedback || undefined });
 							}}
 						>
-							{busy === "deny"
-								? "…"
-								: showFeedback
-									? isPlan
-										? "Send feedback"
-										: "Deny"
-									: isPlan
-										? "Keep planning"
-										: "Deny"}
+							{busy === "deny" ? "…" : denyLabel}
 						</Button>
 						<Button
-							variant="aurora"
 							size="lg"
 							className="flex-[1.6]"
 							disabled={!!busy}
@@ -254,7 +242,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 							type="button"
 							disabled={!!busy}
 							onClick={() => decide("always", { behavior: "allowAlways" })}
-							className="text-muted-foreground hover:text-foreground w-full py-1 text-center text-[0.8125rem] font-medium"
+							className="text-muted-foreground hover:text-foreground w-full py-1.5 text-center text-[13px] font-medium"
 						>
 							Allow, and don't ask again for this
 						</button>
@@ -263,9 +251,11 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 			}
 		>
 			{request.blockedPath ? (
-				<p className="border-warning/25 bg-warning/8 text-warning mb-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-[0.8125rem]">
-					<ShieldAlert className="mt-0.5 size-4 shrink-0" />
-					Outside the project: <span className="font-mono break-all">{request.blockedPath}</span>
+				<p className="bg-warning-soft text-warning mb-3 flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px]">
+					<ShieldWarningIcon weight="fill" className="mt-px size-4 flex-none" />
+					<span>
+						Outside the project: <span className="font-mono break-all">{request.blockedPath}</span>
+					</span>
 				</p>
 			) : null}
 			<ToolBody tool={tool} cwd={cwd} />

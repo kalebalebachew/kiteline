@@ -28,7 +28,6 @@ export function RenameSheet({
 			description="The name shows here and in Claude Code's /resume list."
 			footer={
 				<Button
-					variant="aurora"
 					size="lg"
 					className="w-full"
 					disabled={busy || !value.trim()}
@@ -53,7 +52,7 @@ export function RenameSheet({
 				onChange={(e) => setValue(e.target.value)}
 				maxLength={200}
 				aria-label="Session name"
-				className="border-border-strong bg-surface focus:border-aurora-1/60 h-12 w-full rounded-2xl border px-4 text-[1rem] outline-none"
+				className="bg-surface-2 focus-visible:bg-surface-3 h-12 w-full rounded-xl px-4 text-[16px] outline-none focus-visible:outline-none"
 			/>
 		</Sheet>
 	);

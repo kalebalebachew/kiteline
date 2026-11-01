@@ -1,19 +1,19 @@
 import type { PermissionDecision, PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
+import {
+	ArrowDownIcon,
+	CaretLeftIcon,
+	CopyIcon,
+	DotsThreeIcon,
+	FolderSimpleIcon,
+	GitBranchIcon,
+	PencilSimpleIcon,
+	PowerIcon,
+	ShieldWarningIcon,
+	TerminalWindowIcon,
+} from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import {
-	ArrowDown,
-	ChevronLeft,
-	Copy,
-	Ellipsis,
-	FolderClosed,
-	GitBranch,
-	Pencil,
-	Power,
-	ShieldAlert,
-	TerminalSquare,
-} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -125,44 +125,46 @@ function SessionPage() {
 
 	return (
 		<div className="flex min-h-dvh flex-col">
-			<header className="pt-safe glass border-border sticky top-0 z-30 border-b">
+			<header className="pt-safe glass sticky top-0 z-30 shadow-[0_1px_0_var(--border)]">
 				<div className="mx-auto flex h-14 max-w-3xl items-center gap-1 px-2">
 					<button
 						type="button"
 						aria-label="Back"
 						onClick={() => (window.history.length > 1 ? router.history.back() : router.navigate({ to: "/" }))}
-						className="text-muted-foreground hover:bg-surface-2 hover:text-foreground inline-flex size-10 shrink-0 items-center justify-center rounded-full"
+						className="text-icon hover:bg-surface-2 hover:text-foreground inline-flex size-10 flex-none items-center justify-center rounded-full transition-colors"
 					>
-						<ChevronLeft className="size-5" />
+						<CaretLeftIcon weight="bold" className="size-[18px]" />
 					</button>
 					<div className="min-w-0 flex-1 px-1">
-						<p className="truncate text-[0.9375rem] leading-tight font-semibold">{title || "Session"}</p>
-						<div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1.5 text-[0.72rem]">
+						<p className="truncate text-[15px] leading-tight font-semibold tracking-[-0.01em]">
+							{title || "Session"}
+						</p>
+						<div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px]">
 							{cwd ? (
-								<>
-									<FolderClosed className="size-3 shrink-0" />
-									<span className="truncate">{baseName(cwd)}</span>
-								</>
+								<span className="flex min-w-0 flex-none items-center gap-1">
+									<FolderSimpleIcon weight="fill" className="text-icon size-3 flex-none" />
+									<span className="max-w-[9rem] truncate">{baseName(cwd)}</span>
+								</span>
 							) : null}
 							{info.data?.gitBranch && info.data.gitBranch !== "HEAD" ? (
-								<>
-									<GitBranch className="ml-1 size-3 shrink-0" />
-									<span className="max-w-[7rem] truncate font-mono">{info.data.gitBranch}</span>
-								</>
+								<span className="ml-1 flex min-w-0 items-center gap-1">
+									<GitBranchIcon weight="fill" className="text-icon size-3 flex-none" />
+									<span className="truncate">{info.data.gitBranch}</span>
+								</span>
 							) : null}
 						</div>
 					</div>
-					<StatusPill status={connected || !live ? status : "starting"} className="shrink-0" />
+					<StatusPill status={connected || !live ? status : "starting"} className="flex-none" />
 					<Menu>
 						<MenuTrigger
 							aria-label="Session menu"
-							className="text-muted-foreground hover:bg-surface-2 hover:text-foreground data-popup-open:bg-surface-2 inline-flex size-10 shrink-0 items-center justify-center rounded-full"
+							className="text-icon hover:bg-surface-2 hover:text-foreground data-popup-open:bg-surface-2 inline-flex size-10 flex-none items-center justify-center rounded-full transition-colors"
 						>
-							<Ellipsis className="size-5" />
+							<DotsThreeIcon weight="bold" className="size-5" />
 						</MenuTrigger>
 						<MenuContent side="bottom" align="end" className="w-64">
 							<MenuItem onClick={() => setRenaming(true)}>
-								<Pencil className="text-muted-foreground size-4" />
+								<PencilSimpleIcon weight="fill" className="text-icon size-4" />
 								Rename
 							</MenuItem>
 							<MenuItem
@@ -171,7 +173,7 @@ function SessionPage() {
 									if (await copyText(command)) toast.success("Resume command copied");
 								}}
 							>
-								<TerminalSquare className="text-muted-foreground size-4" />
+								<TerminalWindowIcon weight="fill" className="text-icon size-4" />
 								Copy terminal resume command
 							</MenuItem>
 							<MenuItem
@@ -179,7 +181,7 @@ function SessionPage() {
 									if (await copyText(sessionId)) toast.success("Session ID copied");
 								}}
 							>
-								<Copy className="text-muted-foreground size-4" />
+								<CopyIcon weight="fill" className="text-icon size-4" />
 								Copy session ID
 							</MenuItem>
 							{live ? (
@@ -191,7 +193,7 @@ function SessionPage() {
 											void client.runs.stop({ sessionId }).then(() => toast("Session put to sleep"))
 										}
 									>
-										<Power className="size-4" />
+										<PowerIcon weight="bold" className="size-4" />
 										Stop the Claude Code process
 									</MenuItem>
 								</>
@@ -201,15 +203,15 @@ function SessionPage() {
 				</div>
 			</header>
 
-			<main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-5 pb-6">
+			<main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-6 pb-6">
 				<div ref={content}>
 					{history.hasEarlier ? (
-						<div className="mb-5 flex justify-center">
+						<div className="mb-6 flex justify-center">
 							<button
 								type="button"
 								onClick={() => void history.loadEarlier()}
 								disabled={history.loadingEarlier}
-								className="border-border text-muted-foreground hover:bg-surface-2 h-8 rounded-full border px-3.5 text-xs font-medium"
+								className="bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground h-8 rounded-full px-3.5 text-[13px] font-medium"
 							>
 								{history.loadingEarlier ? "Loading…" : "Load earlier messages"}
 							</button>
@@ -219,7 +221,7 @@ function SessionPage() {
 					{history.isLoading ? (
 						<TimelineSkeleton />
 					) : items.length === 0 && !run ? (
-						<p className="text-muted-foreground py-16 text-center text-sm">
+						<p className="text-muted-foreground py-16 text-center text-[14px]">
 							This session has no messages yet.
 						</p>
 					) : (
@@ -242,13 +244,13 @@ function SessionPage() {
 										<WorkingLine label={run.meta.compacting ? "Compacting" : "Thinking"} />
 									) : null}
 									{run?.usage && !working ? (
-										<p className="text-faint text-center text-[0.7rem] tabular-nums">
+										<p className="text-faint text-center text-[12px] tabular-nums">
 											{run.usage.numTurns} {run.usage.numTurns === 1 ? "turn" : "turns"} ·{" "}
 											{formatCost(run.usage.costUsd)} this visit
 										</p>
 									) : null}
 									{run?.status === "error" && run.error ? (
-										<p className="border-destructive/25 bg-destructive/8 text-destructive rounded-xl border px-3.5 py-2.5 text-[0.8125rem]">
+										<p className="bg-destructive-soft text-destructive rounded-xl px-3.5 py-2.5 text-[13px]">
 											The Claude Code process stopped: {run.error}
 										</p>
 									) : null}
@@ -259,17 +261,17 @@ function SessionPage() {
 				</div>
 			</main>
 
-			<div className="from-background via-background to-background/0 sticky bottom-0 z-20 bg-gradient-to-t pt-6">
-				<div className="mx-auto w-full max-w-3xl px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+			<div className="from-background via-background to-background/0 sticky bottom-0 z-20 bg-gradient-to-t via-70% pt-8">
+				<div className="relative mx-auto w-full max-w-3xl px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
 					{away ? (
-						<div className="pointer-events-none absolute -top-8 right-0 left-0 flex justify-center">
+						<div className="pointer-events-none absolute -top-9 right-0 left-0 flex justify-center">
 							<button
 								type="button"
 								aria-label="Jump to latest"
 								onClick={() => scrollToBottom("smooth")}
-								className="elevated border-border-strong bg-popover text-muted-foreground pointer-events-auto inline-flex size-9 items-center justify-center rounded-full border"
+								className="bg-raised text-icon shadow-float pointer-events-auto inline-flex size-9 items-center justify-center rounded-full"
 							>
-								<ArrowDown className="size-4" />
+								<ArrowDownIcon weight="bold" className="size-4" />
 							</button>
 						</div>
 					) : null}
@@ -278,20 +280,20 @@ function SessionPage() {
 						<button
 							type="button"
 							onClick={() => setSheetFor(current.id)}
-							className="border-warning/35 bg-warning/10 text-warning animate-in fade-in-0 slide-in-from-bottom-2 mb-2 flex w-full items-center gap-2.5 rounded-2xl border px-4 py-3 text-left text-sm font-medium"
+							className="bg-warning-soft text-warning animate-in fade-in-0 slide-in-from-bottom-2 mb-2 flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[14px] font-medium"
 						>
-							<ShieldAlert className="size-4 shrink-0" />
+							<ShieldWarningIcon weight="fill" className="size-4 flex-none" />
 							<span className="flex-1">
 								{permissions.length === 1
 									? "Claude Code is waiting for you"
 									: `${permissions.length} requests waiting`}
 							</span>
-							<span className="text-xs opacity-80">Review</span>
+							<span className="text-[13px] opacity-80">Review</span>
 						</button>
 					) : null}
 
 					{recentlyActive ? (
-						<p className="text-faint mb-2 px-2 text-center text-[0.72rem] leading-snug">
+						<p className="text-faint mb-2 px-3 text-center text-[12px] leading-snug">
 							Active {relativeTime(lastModified)}. If it's still open in a terminal, close it there before
 							replying here.
 						</p>

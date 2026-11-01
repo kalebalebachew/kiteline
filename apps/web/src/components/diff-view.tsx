@@ -58,7 +58,7 @@ function Line({ row }: { row: Row }) {
 				row.kind === "del" && "bg-diff-del",
 			)}
 		>
-			<span className="text-faint/70 pr-2 text-right tabular-nums select-none">{row.newNo ?? row.oldNo}</span>
+			<span className="text-faint pr-2 text-right tabular-nums select-none">{row.newNo ?? row.oldNo}</span>
 			<span
 				className={cn(
 					"text-center select-none",
@@ -79,7 +79,7 @@ function Gap({ rows }: { rows: Row[] }) {
 		<button
 			type="button"
 			onClick={() => setOpen(true)}
-			className="bg-surface-2/60 text-faint hover:text-foreground block w-full px-3 py-1 text-left font-sans text-[0.7rem]"
+			className="text-faint hover:text-foreground block w-full px-3 py-1 text-left font-sans text-[12px]"
 		>
 			⋯ {rows.length} unchanged {rows.length === 1 ? "line" : "lines"}
 		</button>
@@ -97,7 +97,7 @@ export function DiffView({
 }) {
 	const blocks = useMemo(() => toBlocks(toRows(before, after)), [before, after]);
 	return (
-		<div className={cn("overflow-x-auto font-mono text-[0.74rem] leading-[1.6]", className)}>
+		<div className={cn("overflow-x-auto font-mono text-[12px] leading-[1.65]", className)}>
 			<div className="min-w-max py-1">
 				{blocks.map((block) =>
 					block.kind === "gap" ? (

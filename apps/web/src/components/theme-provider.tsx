@@ -19,7 +19,7 @@ function readStored(key: string, fallback: Theme): Theme {
 export function ThemeProvider({
 	children,
 	storageKey = "kiteline-theme",
-	defaultTheme = "dark",
+	defaultTheme = "system",
 }: {
 	children: ReactNode;
 	storageKey?: string;

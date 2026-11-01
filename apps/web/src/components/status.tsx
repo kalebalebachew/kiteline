@@ -13,9 +13,9 @@ const LABEL: Record<DisplayStatus, string> = {
 	error: "Stopped",
 };
 
-const TONE: Record<DisplayStatus, string> = {
-	starting: "bg-aurora-1",
-	running: "bg-aurora-1",
+const DOT: Record<DisplayStatus, string> = {
+	starting: "bg-brand",
+	running: "bg-brand",
 	waiting: "bg-warning",
 	idle: "bg-success",
 	closed: "bg-faint",
@@ -28,13 +28,13 @@ export function statusLabel(status: DisplayStatus) {
 }
 
 export function StatusDot({ status, className }: { status: DisplayStatus; className?: string }) {
-	const pulsing = status === "running" || status === "starting" || status === "waiting";
+	const live = status === "running" || status === "starting" || status === "waiting";
 	return (
 		<span className={cn("relative inline-flex size-2 shrink-0", className)} aria-hidden="true">
-			{pulsing ? (
-				<span className={cn("absolute inset-0 animate-ping rounded-full opacity-60", TONE[status])} />
+			{live ? (
+				<span className={cn("absolute inset-0 animate-ping rounded-full opacity-40", DOT[status])} />
 			) : null}
-			<span className={cn("relative inline-flex size-2 rounded-full", TONE[status])} />
+			<span className={cn("relative inline-flex size-2 rounded-full", DOT[status])} />
 		</span>
 	);
 }
@@ -43,13 +43,13 @@ export function StatusPill({ status, className }: { status: DisplayStatus; class
 	return (
 		<span
 			className={cn(
-				"border-border bg-surface-2/70 text-muted-foreground inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium",
-				status === "waiting" && "border-warning/30 bg-warning/10 text-warning",
+				"bg-surface-2 text-muted-foreground inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium",
+				status === "waiting" && "bg-warning-soft text-warning",
 				className,
 			)}
 		>
 			<StatusDot status={status} />
-			{LABEL[status]}
+			<span className="trim">{LABEL[status]}</span>
 		</span>
 	);
 }

@@ -1,6 +1,14 @@
 import type { Item } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
-import { Brain, ChevronRight, CircleAlert, ImageIcon, Info, ShieldAlert, TriangleAlert } from "lucide-react";
+import {
+	BrainIcon,
+	CaretRightIcon,
+	ImageSquareIcon,
+	InfoIcon,
+	ShieldWarningIcon,
+	WarningCircleIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
 import { memo, type ReactNode, useMemo, useRef, useState } from "react";
 
 import { formatDuration } from "@/lib/format";
@@ -43,16 +51,16 @@ function toBlocks(items: Item[]): Block[] {
 
 function UserBubble({ item }: { item: Extract<Item, { kind: "user" }> }) {
 	return (
-		<div className="flex justify-end pl-10">
+		<div className="flex justify-end pl-12">
 			<div
 				className={cn(
-					"border-border bg-surface-2 max-w-full rounded-[1.25rem] rounded-br-md border px-3.5 py-2.5 text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap",
-					item.command && "font-mono text-[0.8125rem]",
+					"bg-surface-2 max-w-full rounded-[18px] rounded-br-[6px] px-3.5 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
+					item.command && "font-mono text-[13px]",
 				)}
 			>
 				{item.images ? (
-					<span className="text-muted-foreground mb-1.5 flex items-center gap-1.5 font-sans text-xs">
-						<ImageIcon className="size-3.5" />
+					<span className="text-muted-foreground mb-1.5 flex items-center gap-1.5 font-sans text-[13px]">
+						<ImageSquareIcon weight="fill" className="text-icon size-3.5" />
 						{item.images} {item.images === 1 ? "image" : "images"}
 					</span>
 				) : null}
@@ -64,24 +72,27 @@ function UserBubble({ item }: { item: Extract<Item, { kind: "user" }> }) {
 
 function Notice({ item }: { item: Extract<Item, { kind: "notice" }> }) {
 	const [open, setOpen] = useState(false);
-	const Icon = item.tone === "error" ? CircleAlert : item.tone === "warn" ? TriangleAlert : Info;
+	const Icon = item.tone === "error" ? WarningCircleIcon : item.tone === "warn" ? WarningIcon : InfoIcon;
+	const tone =
+		item.tone === "error" ? "text-destructive" : item.tone === "warn" ? "text-warning" : "text-icon";
 	const long = item.text.length > 140 || item.text.includes("\n");
 	if (long) {
 		return (
-			<div className="border-border bg-surface/60 rounded-xl border">
+			<div className="bg-surface-2 rounded-xl">
 				<button
 					type="button"
 					onClick={() => setOpen((v) => !v)}
-					className="text-muted-foreground flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
+					className="text-muted-foreground flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[13px]"
 				>
-					<Icon className={cn("size-3.5 shrink-0", item.tone === "error" && "text-destructive")} />
+					<Icon weight="fill" className={cn("size-3.5 flex-none", tone)} />
 					<span className="truncate">{item.text.split("\n")[0]}</span>
-					<ChevronRight
-						className={cn("ml-auto size-3.5 shrink-0 transition-transform", open && "rotate-90")}
+					<CaretRightIcon
+						weight="bold"
+						className={cn("text-faint ml-auto size-3 flex-none transition-transform", open && "rotate-90")}
 					/>
 				</button>
 				{open ? (
-					<pre className="border-border text-muted-foreground max-h-72 overflow-auto border-t px-3 py-2 font-mono text-[0.72rem] whitespace-pre-wrap">
+					<pre className="text-muted-foreground max-h-72 overflow-auto px-3.5 pb-3 font-mono text-[12px] whitespace-pre-wrap">
 						{item.text}
 					</pre>
 				) : null}
@@ -92,12 +103,12 @@ function Notice({ item }: { item: Extract<Item, { kind: "notice" }> }) {
 		<div className="flex justify-center">
 			<span
 				className={cn(
-					"border-border text-muted-foreground inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs",
-					item.tone === "error" && "border-destructive/25 bg-destructive/8 text-destructive",
-					item.tone === "warn" && "border-warning/25 bg-warning/8 text-warning",
+					"text-faint inline-flex max-w-full items-center gap-1.5 text-[13px]",
+					item.tone === "error" && "bg-destructive-soft text-destructive rounded-full px-3 py-1",
+					item.tone === "warn" && "text-warning",
 				)}
 			>
-				<Icon className="size-3.5 shrink-0" />
+				<Icon weight="fill" className={cn("size-3.5 flex-none", tone)} />
 				<span className="truncate">{item.text}</span>
 			</span>
 		</div>
@@ -112,15 +123,19 @@ function StepIcon({ tool, ctx }: { tool: Tool; ctx: TimelineContext }) {
 	return (
 		<span
 			className={cn(
-				"bg-background relative z-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full border",
-				failed ? "border-destructive/40 text-destructive" : "border-border-strong text-muted-foreground",
-				pending && "border-warning/50 text-warning",
+				"bg-surface-2 text-icon ring-background relative z-1 inline-flex size-6 flex-none items-center justify-center rounded-full ring-4",
+				failed && "bg-destructive-soft text-destructive",
+				pending && "bg-warning-soft text-warning",
 			)}
 		>
 			{running ? (
-				<span className="border-t-aurora-1 border-r-aurora-2 absolute -inset-px animate-spin rounded-full border-[1.5px] border-transparent [animation-duration:0.9s]" />
+				<span className="border-t-brand absolute inset-0 animate-spin rounded-full border-[1.5px] border-transparent [animation-duration:0.8s]" />
 			) : null}
-			{pending ? <ShieldAlert className="size-3.5" /> : <Icon className="size-3.5" />}
+			{pending ? (
+				<ShieldWarningIcon weight="fill" className="size-3.5" />
+			) : (
+				<Icon weight="fill" className="size-3.5" />
+			)}
 		</span>
 	);
 }
@@ -145,24 +160,22 @@ const ToolStep = memo(function ToolStep({
 				type="button"
 				onClick={() => (pending ? ctx.onOpenPermission(tool.id) : setOpen((v) => !v))}
 				aria-expanded={open}
-				className="group/step flex min-h-9 w-full items-center gap-2.5 rounded-lg py-1 text-left"
+				className="group/step flex min-h-10 w-full items-center gap-3 py-1.5 text-left"
 			>
 				<StepIcon tool={tool} ctx={ctx} />
-				<span className="text-muted-foreground min-w-0 flex-1 truncate text-[0.8125rem]">
-					{summary.verb ? <span className="text-foreground/85">{summary.verb} </span> : null}
-					<span
-						className={cn(summary.mono && "font-mono text-[0.76rem]", !summary.verb && "text-foreground/85")}
-					>
+				<span className="text-muted-foreground min-w-0 flex-1 truncate text-[14px]">
+					{summary.verb ? <span className="text-foreground">{summary.verb} </span> : null}
+					<span className={cn(summary.mono && "font-mono text-[12.5px]", !summary.verb && "text-foreground")}>
 						{summary.target}
 					</span>
 				</span>
 				{pending ? (
-					<span className="bg-warning/12 text-warning shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-medium">
-						Approve
+					<span className="bg-warning-soft text-warning flex-none rounded-full px-2 py-0.5 text-[12px] font-medium">
+						Review
 					</span>
 				) : null}
 				{!pending && seconds && !tool.result ? (
-					<span className="text-faint shrink-0 text-[0.7rem] tabular-nums">
+					<span className="text-faint flex-none text-[12px] tabular-nums">
 						{formatDuration(seconds * 1000)}
 					</span>
 				) : null}
@@ -170,7 +183,7 @@ const ToolStep = memo(function ToolStep({
 					<span
 						key={meta.text}
 						className={cn(
-							"shrink-0 font-mono text-[0.7rem] tabular-nums",
+							"flex-none text-[12px] tabular-nums",
 							meta.tone === "add" && "text-success",
 							meta.tone === "del" && "text-destructive",
 							meta.tone === "muted" && "text-faint",
@@ -180,17 +193,19 @@ const ToolStep = memo(function ToolStep({
 					</span>
 				))}
 				{nested?.length ? (
-					<span className="text-faint shrink-0 text-[0.7rem] tabular-nums">{nested.length} steps</span>
+					<span className="text-faint flex-none text-[12px] tabular-nums">{nested.length} steps</span>
 				) : null}
-				<ChevronRight
+				<CaretRightIcon
+					weight="bold"
 					className={cn(
-						"text-faint size-3.5 shrink-0 opacity-0 transition-[transform,opacity] group-hover/step:opacity-100 [@media(pointer:coarse)]:opacity-60",
-						open && "rotate-90 opacity-100",
+						"text-faint size-3 flex-none transition-transform duration-150",
+						open && "rotate-90",
+						pending && "hidden",
 					)}
 				/>
 			</button>
 			{open ? (
-				<div className="animate-in fade-in-0 slide-in-from-top-1 pt-1 pb-2.5 pl-8.5 duration-200">
+				<div className="animate-in fade-in-0 slide-in-from-top-1 pt-0.5 pb-3 pl-9 duration-200">
 					<ToolBody tool={tool} cwd={ctx.cwd}>
 						{nested?.length ? <NestedActivity items={nested} ctx={ctx} /> : null}
 					</ToolBody>
@@ -207,30 +222,26 @@ function ThinkingStep({ item }: { item: Extract<Item, { kind: "thinking" }> }) {
 			<button
 				type="button"
 				onClick={() => setOpen((v) => !v)}
-				className="flex min-h-9 w-full items-center gap-2.5 py-1 text-left"
+				className="flex min-h-10 w-full items-center gap-3 py-1.5 text-left"
 			>
-				<span className="border-border-strong bg-background text-faint relative z-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full border">
-					<Brain className="size-3.5" />
+				<span className="bg-surface-2 text-icon ring-background relative z-1 inline-flex size-6 flex-none items-center justify-center rounded-full ring-4">
+					<BrainIcon weight="fill" className="size-3.5" />
 				</span>
-				<span className="text-faint min-w-0 flex-1 truncate text-[0.8125rem] italic">
-					{item.text.split("\n")[0]}
-				</span>
+				<span className="text-faint min-w-0 flex-1 truncate text-[14px]">{item.text.split("\n")[0]}</span>
 			</button>
-			{open ? (
-				<Markdown text={item.text} className="text-muted-foreground pb-2 pl-8.5 text-[0.8125rem]" />
-			) : null}
+			{open ? <Markdown text={item.text} className="text-muted-foreground pb-3 pl-9 text-[14px]" /> : null}
 		</div>
 	);
 }
 
 function NestedActivity({ items, ctx }: { items: Item[]; ctx: TimelineContext }) {
 	return (
-		<div className="border-border bg-surface/50 rounded-xl border px-2.5 py-1.5">
+		<div className="bg-surface-2 rounded-xl px-3 py-1">
 			{items.map((item) =>
 				item.kind === "tool" ? (
 					<ToolStep key={item.id} tool={item} ctx={ctx} />
 				) : item.kind === "text" ? (
-					<p key={item.id} className="text-muted-foreground py-1.5 pl-8.5 text-[0.8125rem] leading-relaxed">
+					<p key={item.id} className="text-muted-foreground py-1.5 pl-9 text-[13px] leading-relaxed">
 						{item.text.length > 400 ? `${item.text.slice(0, 400)}…` : item.text}
 					</p>
 				) : null,
@@ -256,20 +267,20 @@ function Steps({
 	const failed = tools.filter((t) => t.result?.isError).length;
 
 	if (!open && !needsYou) {
-		const icons = [...new Map(tools.map((t) => [describeTool(t, ctx.cwd).icon, t.id])).entries()].slice(0, 5);
+		const icons = [...new Map(tools.map((t) => [describeTool(t, ctx.cwd).icon, t.id])).entries()].slice(0, 4);
 		return (
 			<button
 				type="button"
 				onClick={() => setOpen(true)}
-				className="text-muted-foreground flex min-h-9 w-full items-center gap-2.5 rounded-lg py-1 text-left text-[0.8125rem]"
+				className="text-muted-foreground flex min-h-10 w-full items-center gap-3 py-1.5 text-left text-[14px]"
 			>
 				<span className="flex -space-x-1.5">
 					{icons.map(([Icon, id]) => (
 						<span
 							key={id}
-							className="border-border-strong bg-background inline-flex size-6 items-center justify-center rounded-full border"
+							className="bg-surface-2 text-icon ring-background inline-flex size-6 items-center justify-center rounded-full ring-2"
 						>
-							<Icon className="size-3.5" />
+							<Icon weight="fill" className="size-3.5" />
 						</span>
 					))}
 				</span>
@@ -277,13 +288,13 @@ function Steps({
 					{tools.length} {tools.length === 1 ? "step" : "steps"}
 					{failed ? <span className="text-destructive"> · {failed} failed</span> : null}
 				</span>
-				<ChevronRight className="text-faint size-3.5" />
+				<CaretRightIcon weight="bold" className="text-faint size-3" />
 			</button>
 		);
 	}
 
 	return (
-		<div className="before:bg-border-strong relative before:absolute before:top-4 before:bottom-4 before:left-[11.5px] before:w-px">
+		<div className="before:bg-border-strong relative before:absolute before:top-5 before:bottom-5 before:left-[11.5px] before:w-px">
 			{steps.map((step) =>
 				step.kind === "tool" ? (
 					<ToolStep key={step.id} tool={step} ctx={ctx} nested={nestedBy.get(step.id)} />
@@ -297,9 +308,9 @@ function Steps({
 
 export function WorkingLine({ label = "Thinking" }: { label?: string }) {
 	return (
-		<div className="flex items-center gap-2.5 py-1">
-			<KiteMark live className="size-6" />
-			<span className="shimmer-text text-[0.8125rem] font-medium">{label}…</span>
+		<div className="flex items-center gap-3 py-1">
+			<KiteMark live className="text-icon size-6" />
+			<span className="shimmer-text text-[14px] font-medium">{label}…</span>
 		</div>
 	);
 }
@@ -344,7 +355,7 @@ export function Timeline({
 						key={key}
 						className={cn(
 							"min-w-0 [contain-intrinsic-size:auto_64px] [content-visibility:auto]",
-							fresh && "animate-in fade-in-0 slide-in-from-bottom-1.5 duration-300 ease-out",
+							fresh && "animate-in fade-in-0 slide-in-from-bottom-1 duration-300 ease-out",
 						)}
 					>
 						{block.kind === "todo" ? (
@@ -369,7 +380,7 @@ export function Timeline({
 			{draft ? (
 				<div className="min-w-0">
 					<Markdown text={draft} />
-					<span className="aurora animate-caret mt-1 inline-block h-4 w-1.5 rounded-sm align-middle" />
+					<span className="animate-caret bg-brand mt-1 inline-block h-4 w-[2px] rounded-full align-middle" />
 				</div>
 			) : null}
 			{footer}

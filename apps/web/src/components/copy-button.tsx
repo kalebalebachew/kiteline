@@ -1,8 +1,8 @@
 import { cn } from "@kiteline/ui/lib/utils";
-import { Check, Copy } from "lucide-react";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
-/** Clipboard API needs a secure context; plain-HTTP LAN access falls back to execCommand. */
+/** The Clipboard API needs a secure context; plain-HTTP access falls back to execCommand. */
 export async function copyText(text: string) {
 	try {
 		if (window.isSecureContext && navigator.clipboard) {
@@ -39,7 +39,7 @@ export function CopyButton({
 			type="button"
 			aria-label={copied ? "Copied" : label}
 			className={cn(
-				"text-faint hover:bg-surface-3 hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors",
+				"text-icon hover:bg-surface-3 hover:text-foreground inline-flex size-7 flex-none items-center justify-center rounded-md transition-colors",
 				className,
 			)}
 			onClick={async (event) => {
@@ -50,7 +50,11 @@ export function CopyButton({
 				}
 			}}
 		>
-			{copied ? <Check className="text-success size-3.5" /> : <Copy className="size-3.5" />}
+			{copied ? (
+				<CheckIcon weight="bold" className="text-success size-3.5" />
+			) : (
+				<CopyIcon weight="fill" className="size-3.5" />
+			)}
 		</button>
 	);
 }

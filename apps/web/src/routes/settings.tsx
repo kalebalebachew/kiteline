@@ -1,8 +1,8 @@
 import { Button } from "@kiteline/ui/components/button";
 import { cn } from "@kiteline/ui/lib/utils";
+import { CaretLeftIcon, DesktopIcon, MoonIcon, SignOutIcon, SunIcon } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { ChevronLeft, Laptop, LogOut, Moon, Smartphone, Sun } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { KiteMark } from "@/components/brand";
@@ -20,23 +20,25 @@ export const Route = createFileRoute("/settings")({
 function Group({ title, children, hint }: { title: string; children: ReactNode; hint?: ReactNode }) {
 	return (
 		<section className="mt-7">
-			<h2 className="text-faint mb-2 px-1 text-[0.72rem] font-medium tracking-[0.08em] uppercase">{title}</h2>
-			<div className="border-border bg-surface overflow-hidden rounded-2xl border">{children}</div>
-			{hint ? <p className="text-faint mt-2 px-1 text-xs leading-relaxed">{hint}</p> : null}
+			<h2 className="text-muted-foreground mb-2 px-1 text-[13px] font-medium">{title}</h2>
+			<div className="bg-surface shadow-card overflow-hidden rounded-2xl">{children}</div>
+			{hint ? <p className="text-faint mt-2 px-1 text-[13px] leading-relaxed">{hint}</p> : null}
 		</section>
 	);
 }
 
 function Row({ label, children, first }: { label: ReactNode; children: ReactNode; first?: boolean }) {
 	return (
-		<div
-			className={cn(
-				"flex min-h-13 items-center justify-between gap-4 px-4 py-2.5",
-				!first && "border-border border-t",
-			)}
-		>
-			<span className="text-[0.9375rem]">{label}</span>
-			<div className="text-muted-foreground min-w-0 text-right text-sm">{children}</div>
+		<div className="pl-4">
+			<div
+				className={cn(
+					"flex min-h-12 items-center justify-between gap-4 py-2 pr-3",
+					!first && "border-border border-t",
+				)}
+			>
+				<span className="text-[15px]">{label}</span>
+				<div className="text-muted-foreground min-w-0 text-right text-[14px]">{children}</div>
+			</div>
 		</div>
 	);
 }
@@ -51,19 +53,19 @@ function Segmented<T extends string>({
 	onChange: (value: T) => void;
 }) {
 	return (
-		<div className="bg-surface-2 inline-flex rounded-xl p-0.5">
+		<div className="bg-surface-2 inline-flex rounded-[10px] p-0.5">
 			{options.map((o) => (
 				<button
 					key={o.value}
 					type="button"
 					onClick={() => onChange(o.value)}
 					className={cn(
-						"inline-flex h-8 items-center gap-1.5 rounded-[0.6rem] px-2.5 text-[0.8125rem] font-medium transition-colors",
-						value === o.value ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground",
+						"inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
+						value === o.value ? "bg-raised text-foreground shadow-card" : "text-muted-foreground",
 					)}
 				>
 					{o.icon}
-					{o.label}
+					<span className="trim">{o.label}</span>
 				</button>
 			))}
 		</div>
@@ -86,7 +88,7 @@ function Select<T extends string>({
 			aria-label={label}
 			value={value}
 			onChange={(e) => onChange(e.target.value as T)}
-			className="border-border bg-surface-2 text-foreground h-9 max-w-[11rem] rounded-xl border px-2.5 text-[0.8125rem] font-medium outline-none"
+			className="bg-surface-2 text-foreground h-8 max-w-[11rem] rounded-lg px-2.5 text-[14px] font-medium outline-none"
 		>
 			{options.map((o) => (
 				<option key={o.value} value={o.value}>
@@ -107,45 +109,41 @@ function Settings() {
 
 	return (
 		<div className="min-h-dvh">
-			<header className="pt-safe glass border-border sticky top-0 z-30 border-b">
+			<header className="pt-safe glass sticky top-0 z-30 shadow-[0_1px_0_var(--border)]">
 				<div className="mx-auto flex h-14 max-w-2xl items-center gap-1 px-2">
 					<button
 						type="button"
 						aria-label="Back"
 						onClick={() => (window.history.length > 1 ? router.history.back() : router.navigate({ to: "/" }))}
-						className="text-muted-foreground hover:bg-surface-2 hover:text-foreground inline-flex size-10 items-center justify-center rounded-full"
+						className="text-icon hover:bg-surface-2 hover:text-foreground inline-flex size-10 items-center justify-center rounded-full transition-colors"
 					>
-						<ChevronLeft className="size-5" />
+						<CaretLeftIcon weight="bold" className="size-[18px]" />
 					</button>
-					<h1 className="text-[0.9375rem] font-semibold">Settings</h1>
+					<h1 className="text-[15px] font-semibold tracking-[-0.01em]">Settings</h1>
 				</div>
 			</header>
 
 			<main className="mx-auto max-w-2xl px-4 pb-16">
 				<Group
 					title="Pair another device"
-					hint="Anyone with this link can drive Claude Code on this computer. Restart the server with --new-token to unpair every device."
+					hint="Anyone with this link can drive Claude Code on this computer. Restart Kiteline with --new-token to unpair every device."
 				>
-					<div className="flex flex-col items-center gap-4 px-4 py-6 sm:flex-row sm:items-start">
+					<div className="flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
 						<div
-							className="size-44 shrink-0 overflow-hidden rounded-2xl bg-white p-2.5 [&_svg]:size-full"
+							className="shadow-card size-44 flex-none overflow-hidden rounded-xl bg-white p-2.5 [&_svg]:size-full"
 							// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG generated by the server's QR encoder.
 							dangerouslySetInnerHTML={{ __html: info?.pairing.svg ?? "" }}
 						/>
-						<div className="w-full min-w-0 space-y-2">
-							<p className="text-muted-foreground text-sm">
+						<div className="w-full min-w-0 space-y-2.5">
+							<p className="text-muted-foreground text-[14px]">
 								Scan with the other device's camera, or send it this link.
 							</p>
-							<div className="border-border bg-surface-2 flex items-center gap-1 rounded-xl border py-1 pr-1 pl-3">
-								<span className="min-w-0 flex-1 truncate font-mono text-xs">{info?.pairing.url ?? "…"}</span>
+							<div className="bg-surface-2 flex items-center gap-1 rounded-lg py-1 pr-1 pl-3">
+								<span className="min-w-0 flex-1 truncate font-mono text-[12px]">
+									{info?.pairing.url ?? "…"}
+								</span>
 								{info ? <CopyButton text={info.pairing.url} label="Copy pairing link" /> : null}
 							</div>
-							{info?.pairing.urls.length ? (
-								<p className="text-faint text-xs leading-relaxed">
-									Reachable at{" "}
-									{info.pairing.urls.filter((u) => !u.includes("localhost")).join(", ") || "localhost only"}
-								</p>
-							) : null}
 						</div>
 					</div>
 				</Group>
@@ -156,9 +154,9 @@ function Settings() {
 							value={theme}
 							onChange={setTheme}
 							options={[
-								{ value: "system", label: "Auto", icon: <Laptop className="size-3.5" /> },
-								{ value: "light", label: "Light", icon: <Sun className="size-3.5" /> },
-								{ value: "dark", label: "Dark", icon: <Moon className="size-3.5" /> },
+								{ value: "system", label: "Auto", icon: <DesktopIcon weight="fill" className="size-3.5" /> },
+								{ value: "light", label: "Light", icon: <SunIcon weight="fill" className="size-3.5" /> },
+								{ value: "dark", label: "Dark", icon: <MoonIcon weight="fill" className="size-3.5" /> },
 							]}
 						/>
 					</Row>
@@ -186,7 +184,7 @@ function Settings() {
 							options={MODELS.map((m) => ({ value: m.id ?? "__default", label: m.title }))}
 						/>
 					</Row>
-					<Row label="Return key sends">
+					<Row label="Return key">
 						<Segmented
 							value={prefs.enterToSend ? "on" : "off"}
 							onChange={(v) => setPrefs({ enterToSend: v === "on" })}
@@ -202,30 +200,27 @@ function Settings() {
 					<Row label="Name" first>
 						{info?.hostname ?? "…"}
 					</Row>
-					<Row label="Kiteline">v{info?.version ?? "…"}</Row>
+					<Row label="Kiteline">{info ? `v${info.version}` : "…"}</Row>
 				</Group>
 
-				<div className="mt-7">
-					<Button
-						variant="destructive"
-						size="lg"
-						className="w-full"
-						onClick={async () => {
-							await unpair();
-							queryClient.setQueryData(["auth"], { authed: false });
-						}}
-					>
-						<LogOut className="size-4" />
-						Unpair this device
-					</Button>
-				</div>
+				<Button
+					variant="destructive"
+					size="lg"
+					className="mt-7 w-full"
+					onClick={async () => {
+						await unpair();
+						queryClient.setQueryData(["auth"], { authed: false });
+					}}
+				>
+					<SignOutIcon weight="bold" className="size-4" />
+					Unpair this device
+				</Button>
 
-				<footer className="text-faint mt-12 flex flex-col items-center gap-2 text-center text-xs">
-					<KiteMark className="size-8 opacity-70" />
+				<footer className="text-faint mt-12 flex flex-col items-center gap-3 text-center text-[13px]">
+					<KiteMark className="text-faint size-7" />
 					<p>
 						Kiteline is open source and runs entirely on your computer.
 						<br />
-						<Smartphone className="mr-1 inline size-3.5" />
 						Add it to your home screen for a full-screen app.
 					</p>
 				</footer>

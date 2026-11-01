@@ -7,50 +7,60 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Kiteline's palette: blue-black ink, one "aurora" pairing (sky to violet)
- * reserved for the brand mark, the send button and anything live.
+ * Kiteline's look: one neutral family, five inks, one blue accent spent on
+ * what's live or acted on. Status colors only where status is the subject.
+ * Depth comes from surface steps, not gradients or glows.
  */
 :root {
-	--background: oklch(0.985 0.003 265);
-	--foreground: oklch(0.21 0.018 265);
-	--surface: oklch(1 0 0);
-	--surface-2: oklch(0.962 0.005 265);
-	--surface-3: oklch(0.935 0.007 265);
+	--background: #fdfdfc;
+	--surface: #ffffff;
+	--surface-2: #f5f5f4;
+	--surface-3: #ececeb;
+	--raised: #ffffff;
+	--foreground: #18181a;
+	--muted-foreground: #6e6e72;
+	--faint: #9a9a9d;
+	--icon: #707074;
+	--border: rgba(0, 0, 0, 0.07);
+	--border-strong: rgba(0, 0, 0, 0.12);
+	--brand: #0a84ff;
+	--brand-soft: rgba(10, 132, 255, 0.1);
+	--brand-text: #0069d9;
+	--success: #15803d;
+	--success-soft: rgba(34, 197, 94, 0.12);
+	--warning: #b45309;
+	--warning-soft: rgba(245, 158, 11, 0.13);
+	--destructive: #dc2626;
+	--destructive-soft: rgba(239, 68, 68, 0.1);
+	--diff-add: rgba(34, 197, 94, 0.11);
+	--diff-del: rgba(239, 68, 68, 0.09);
+	--shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+	--shadow-float:
+		0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 32px -8px rgba(0, 0, 0, 0.14);
+	--radius: 0.75rem;
+
 	--card: var(--surface);
 	--card-foreground: var(--foreground);
-	--popover: oklch(1 0 0);
+	--popover: var(--raised);
 	--popover-foreground: var(--foreground);
-	--primary: oklch(0.25 0.02 265);
-	--primary-foreground: oklch(0.985 0.003 265);
+	--primary: var(--foreground);
+	--primary-foreground: var(--background);
 	--secondary: var(--surface-2);
 	--secondary-foreground: var(--foreground);
 	--muted: var(--surface-2);
-	--muted-foreground: oklch(0.47 0.016 265);
-	--faint: oklch(0.6 0.014 265);
-	--accent: var(--surface-3);
+	--accent: var(--surface-2);
 	--accent-foreground: var(--foreground);
-	--border: oklch(0.25 0.03 265 / 10%);
-	--border-strong: oklch(0.25 0.03 265 / 18%);
-	--input: oklch(0.25 0.03 265 / 14%);
-	--ring: oklch(0.6 0.13 225);
-	--aurora-1: oklch(0.66 0.14 222);
-	--aurora-2: oklch(0.57 0.2 293);
-	--success: oklch(0.56 0.14 158);
-	--warning: oklch(0.66 0.15 70);
-	--destructive: oklch(0.57 0.21 25);
-	--diff-add: oklch(0.56 0.14 158 / 12%);
-	--diff-del: oklch(0.57 0.21 25 / 11%);
-	--shadow-color: 250 30% 20%;
-	--radius: 0.875rem;
-	--chart-1: var(--aurora-1);
-	--chart-2: var(--aurora-2);
-	--chart-3: var(--success);
-	--chart-4: var(--warning);
-	--chart-5: var(--destructive);
+	--input: var(--border-strong);
+	--ring: var(--brand);
+	--chart-1: var(--brand);
+	--chart-2: var(--success);
+	--chart-3: var(--warning);
+	--chart-4: var(--destructive);
+	--chart-5: var(--faint);
 	--sidebar: var(--surface-2);
 	--sidebar-foreground: var(--foreground);
-	--sidebar-primary: var(--primary);
-	--sidebar-primary-foreground: var(--primary-foreground);
+	--sidebar-primary: var(--foreground);
+	--sidebar-primary-foreground: var(--background);
 	--sidebar-accent: var(--surface-3);
 	--sidebar-accent-foreground: var(--foreground);
 	--sidebar-border: var(--border);
@@ -59,46 +69,55 @@
 }
 
 .dark {
-	--background: oklch(0.148 0.01 268);
-	--foreground: oklch(0.95 0.006 265);
-	--surface: oklch(0.182 0.011 268);
-	--surface-2: oklch(0.215 0.012 268);
-	--surface-3: oklch(0.255 0.014 268);
-	--popover: oklch(0.205 0.012 268);
-	--primary: oklch(0.95 0.006 265);
-	--primary-foreground: oklch(0.17 0.012 268);
-	--muted-foreground: oklch(0.7 0.014 265);
-	--faint: oklch(0.54 0.014 265);
-	--border: oklch(1 0 0 / 7.5%);
-	--border-strong: oklch(1 0 0 / 13%);
-	--input: oklch(1 0 0 / 10%);
-	--ring: oklch(0.8 0.12 215);
-	--aurora-1: oklch(0.83 0.12 210);
-	--aurora-2: oklch(0.73 0.16 293);
-	--success: oklch(0.79 0.14 160);
-	--warning: oklch(0.84 0.13 80);
-	--destructive: oklch(0.7 0.18 24);
-	--diff-add: oklch(0.79 0.14 160 / 11%);
-	--diff-del: oklch(0.7 0.18 24 / 13%);
-	--shadow-color: 265 40% 2%;
+	--background: #111113;
+	--surface: #18181b;
+	--surface-2: #1f1f22;
+	--surface-3: #29292d;
+	--raised: #222225;
+	--foreground: #ececee;
+	--muted-foreground: #9d9da1;
+	--faint: #6c6c70;
+	--icon: #9a9aa0;
+	--border: rgba(255, 255, 255, 0.07);
+	--border-strong: rgba(255, 255, 255, 0.12);
+	--brand: #3d9bff;
+	--brand-soft: rgba(61, 155, 255, 0.16);
+	--brand-text: #6cb3ff;
+	--success: #4ade80;
+	--success-soft: rgba(34, 197, 94, 0.16);
+	--warning: #fbbf24;
+	--warning-soft: rgba(245, 158, 11, 0.16);
+	--destructive: #f87171;
+	--destructive-soft: rgba(239, 68, 68, 0.16);
+	--diff-add: rgba(34, 197, 94, 0.13);
+	--diff-del: rgba(239, 68, 68, 0.13);
+	--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+	--shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.09), 0 12px 32px -8px rgba(0, 0, 0, 0.6);
 	color-scheme: dark;
 }
 
 @theme inline {
-	--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 	--font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
-	--font-display: "Instrument Serif", ui-serif, Georgia, serif;
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
 	--color-surface-3: var(--surface-3);
+	--color-raised: var(--raised);
 	--color-faint: var(--faint);
+	--color-icon: var(--icon);
 	--color-border-strong: var(--border-strong);
-	--color-aurora-1: var(--aurora-1);
-	--color-aurora-2: var(--aurora-2);
+	--color-brand: var(--brand);
+	--color-brand-soft: var(--brand-soft);
+	--color-brand-text: var(--brand-text);
 	--color-success: var(--success);
+	--color-success-soft: var(--success-soft);
 	--color-warning: var(--warning);
+	--color-warning-soft: var(--warning-soft);
+	--color-destructive-soft: var(--destructive-soft);
 	--color-diff-add: var(--diff-add);
 	--color-diff-del: var(--diff-del);
+	--shadow-card: var(--shadow-card);
+	--shadow-float: var(--shadow-float);
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -130,16 +149,15 @@
 	--color-card: var(--card);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
-	--radius-sm: calc(var(--radius) - 6px);
-	--radius-md: calc(var(--radius) - 4px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
-	--radius-2xl: calc(var(--radius) + 8px);
-	--radius-3xl: calc(var(--radius) + 12px);
-	--radius-4xl: calc(var(--radius) + 16px);
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 10px;
+	--radius-xl: 12px;
+	--radius-2xl: 16px;
+	--radius-3xl: 20px;
+	--radius-4xl: 24px;
 	--ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-	--animate-shimmer: shimmer 2.2s linear infinite;
-	--animate-breathe: breathe 2.4s ease-in-out infinite;
+	--animate-shimmer: shimmer 2.4s linear infinite;
 	--animate-caret: caret 1s steps(2, start) infinite;
 	--animate-sway: sway 3.4s ease-in-out infinite;
 
@@ -149,17 +167,6 @@
 		}
 		to {
 			background-position: -200% 0;
-		}
-	}
-	@keyframes breathe {
-		0%,
-		100% {
-			opacity: 0.55;
-			transform: scale(0.92);
-		}
-		50% {
-			opacity: 1;
-			transform: scale(1);
 		}
 	}
 	@keyframes caret {
@@ -190,37 +197,35 @@
 	}
 	body {
 		@apply bg-background text-foreground;
-		font-feature-settings: "ss01", "cv11";
+		font-size: 15px;
+		line-height: 1.5;
+		letter-spacing: -0.006em;
+		font-feature-settings: "cv11", "ss03";
 		overscroll-behavior-y: none;
 	}
 	::selection {
-		background: color-mix(in oklch, var(--aurora-1) 32%, transparent);
+		background: var(--brand-soft);
 	}
 	button,
 	[role="button"] {
 		cursor: pointer;
 	}
+	:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
+	}
 }
 
 @layer components {
-	/* The one gradient: brand mark, send button, live indicators. */
-	.aurora {
-		background-image: linear-gradient(135deg, var(--aurora-1), var(--aurora-2));
-	}
-	.aurora-text {
-		background-image: linear-gradient(100deg, var(--aurora-1), var(--aurora-2));
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-	}
+	/* "Thinking": the one ambient motion, and it has a cause. */
 	.shimmer-text {
 		background-image: linear-gradient(
 			90deg,
-			var(--muted-foreground) 0%,
-			var(--muted-foreground) 40%,
+			var(--faint) 0%,
+			var(--faint) 40%,
 			var(--foreground) 50%,
-			var(--muted-foreground) 60%,
-			var(--muted-foreground) 100%
+			var(--faint) 60%,
+			var(--faint) 100%
 		);
 		background-size: 200% 100%;
 		-webkit-background-clip: text;
@@ -229,29 +234,9 @@
 		animation: var(--animate-shimmer);
 	}
 	.glass {
-		background: color-mix(in oklch, var(--background) 92%, transparent);
-		backdrop-filter: saturate(160%) blur(22px);
-		-webkit-backdrop-filter: saturate(160%) blur(22px);
-	}
-	.elevated {
-		box-shadow:
-			0 1px 0 0 color-mix(in oklch, white 4%, transparent) inset,
-			0 1px 2px hsl(var(--shadow-color) / 0.12),
-			0 8px 24px -6px hsl(var(--shadow-color) / 0.22);
-	}
-	/* Faint top glow behind page headers; one per screen at most. */
-	.halo {
-		background:
-			radial-gradient(
-				60% 50% at 20% 0%,
-				color-mix(in oklch, var(--aurora-1) 14%, transparent),
-				transparent 70%
-			),
-			radial-gradient(
-				50% 45% at 85% 0%,
-				color-mix(in oklch, var(--aurora-2) 12%, transparent),
-				transparent 70%
-			);
+		background: color-mix(in srgb, var(--background) 94%, transparent);
+		backdrop-filter: saturate(180%) blur(20px);
+		-webkit-backdrop-filter: saturate(180%) blur(20px);
 	}
 	.no-scrollbar {
 		scrollbar-width: none;
@@ -265,27 +250,31 @@
 	.pb-safe {
 		padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
 	}
+	/* Labels beside icons and inside pills center on their letters, not the line box. */
+	.trim {
+		text-box: trim-both cap alphabetic;
+	}
 
-	/* Assistant prose: comfortable on a phone, dense enough for code talk. */
+	/* Claude's replies: readable on a phone, dense enough for code talk. */
 	.prose-kiteline {
-		font-size: 0.9625rem;
-		line-height: 1.65;
+		font-size: 15px;
+		line-height: 1.6;
 		overflow-wrap: anywhere;
 	}
 	.prose-kiteline > * + * {
-		margin-top: 0.8em;
+		margin-top: 0.75em;
 	}
 	.prose-kiteline :where(h1, h2, h3, h4) {
 		font-weight: 600;
-		letter-spacing: -0.01em;
+		letter-spacing: -0.012em;
 		line-height: 1.3;
-		margin-top: 1.3em;
+		margin-top: 1.25em;
 	}
 	.prose-kiteline h1 {
-		font-size: 1.25rem;
+		font-size: 1.2rem;
 	}
 	.prose-kiteline h2 {
-		font-size: 1.125rem;
+		font-size: 1.1rem;
 	}
 	.prose-kiteline h3,
 	.prose-kiteline h4 {
@@ -307,9 +296,11 @@
 		color: var(--faint);
 	}
 	.prose-kiteline a {
-		color: var(--aurora-1);
+		color: var(--brand-text);
+		text-decoration: none;
+	}
+	.prose-kiteline a:hover {
 		text-decoration: underline;
-		text-decoration-color: color-mix(in oklch, var(--aurora-1) 40%, transparent);
 		text-underline-offset: 3px;
 	}
 	.prose-kiteline strong {
@@ -325,11 +316,10 @@
 	}
 	.prose-kiteline :not(pre) > code {
 		font-family: var(--font-mono);
-		font-size: 0.85em;
-		padding: 0.12em 0.38em;
-		border-radius: 0.375rem;
+		font-size: 0.84em;
+		padding: 0.1em 0.35em;
+		border-radius: 5px;
 		background: var(--surface-2);
-		border: 1px solid var(--border);
 	}
 	.prose-kiteline table {
 		display: block;
@@ -338,13 +328,12 @@
 		font-size: 0.875rem;
 	}
 	.prose-kiteline :where(th, td) {
-		border: 1px solid var(--border);
-		padding: 0.4em 0.65em;
+		border-bottom: 1px solid var(--border);
+		padding: 0.45em 0.75em 0.45em 0;
 		text-align: left;
 		white-space: nowrap;
 	}
 	.prose-kiteline th {
-		background: var(--surface-2);
 		font-weight: 600;
 	}
 

@@ -1,7 +1,5 @@
-import "@fontsource-variable/geist";
+import "@fontsource-variable/inter";
 import "@fontsource-variable/geist-mono";
-import "@fontsource/instrument-serif/400.css";
-import "@fontsource/instrument-serif/400-italic.css";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";

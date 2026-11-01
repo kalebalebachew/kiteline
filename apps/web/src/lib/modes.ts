@@ -1,47 +1,54 @@
 import type { PermissionModeId } from "@kiteline/api/agent/types";
-import { ClipboardList, Hand, type LucideIcon, PencilLine, ShieldOff, Sparkles } from "lucide-react";
+import {
+	ClipboardTextIcon,
+	HandIcon,
+	type Icon,
+	PencilSimpleLineIcon,
+	ShieldCheckIcon,
+	ShieldSlashIcon,
+} from "@phosphor-icons/react";
 
 export const MODES: {
 	id: PermissionModeId;
 	title: string;
 	short: string;
 	description: string;
-	icon: LucideIcon;
+	icon: Icon;
 }[] = [
 	{
 		id: "default",
 		title: "Ask first",
 		short: "Ask",
 		description: "Approve each edit and command from here.",
-		icon: Hand,
+		icon: HandIcon,
 	},
 	{
 		id: "acceptEdits",
 		title: "Auto-accept edits",
 		short: "Edits",
 		description: "File edits go through; commands still ask.",
-		icon: PencilLine,
+		icon: PencilSimpleLineIcon,
 	},
 	{
 		id: "plan",
 		title: "Plan only",
 		short: "Plan",
 		description: "Reads and plans. Changes nothing until you approve.",
-		icon: ClipboardList,
+		icon: ClipboardTextIcon,
 	},
 	{
 		id: "auto",
 		title: "Auto",
 		short: "Auto",
-		description: "A safety classifier approves routine calls and asks about the rest.",
-		icon: Sparkles,
+		description: "A safety check approves routine calls and asks about the rest.",
+		icon: ShieldCheckIcon,
 	},
 	{
 		id: "bypassPermissions",
 		title: "Bypass permissions",
 		short: "Bypass",
 		description: "Never asks. Only for throwaway work.",
-		icon: ShieldOff,
+		icon: ShieldSlashIcon,
 	},
 ];
 
