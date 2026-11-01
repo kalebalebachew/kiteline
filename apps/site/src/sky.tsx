@@ -1,38 +1,29 @@
-/**
- * The hero's sky, drawn rather than photographed: a gradient from deep blue to
- * the horizon, high streaks of cirrus and a low bank of cloud, both from SVG
- * fractal noise, and a haze where the sky meets the page.
- */
+const base = import.meta.env.BASE_URL;
+
+/** The hero's sky: the photograph's own deep blue, fading into the page below the horizon. */
 export function Sky() {
 	return (
 		<div className="sky" aria-hidden="true">
-			<svg
-				className="sky__layer sky__layer--high"
-				viewBox="0 0 1600 900"
-				preserveAspectRatio="none"
-				aria-hidden="true"
-			>
-				<filter id="sky-cirrus" x="0" y="0" width="100%" height="100%">
-					<feTurbulence type="fractalNoise" baseFrequency="0.0016 0.013" numOctaves="5" seed="11" />
-					<feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.7 0 0 0 -1.32" />
-					<feGaussianBlur stdDeviation="0.8" />
-				</filter>
-				<rect width="1600" height="900" filter="url(#sky-cirrus)" />
-			</svg>
-			<svg
-				className="sky__layer sky__layer--low"
-				viewBox="0 0 1600 900"
-				preserveAspectRatio="none"
-				aria-hidden="true"
-			>
-				<filter id="sky-cumulus" x="0" y="0" width="100%" height="100%">
-					<feTurbulence type="fractalNoise" baseFrequency="0.005 0.008" numOctaves="6" seed="4" />
-					<feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  3.4 0 0 0 -1.55" />
-				</filter>
-				<rect width="1600" height="900" filter="url(#sky-cumulus)" />
-			</svg>
 			<div className="sky__haze" />
 		</div>
+	);
+}
+
+/**
+ * A cumulus tower (Pexels photo 8726326), anchored to the framed demo rather than the sky so its
+ * tops always rise just above the frame and every word above it sits on clear blue.
+ */
+export function Clouds() {
+	return (
+		<img
+			className="clouds"
+			src={`${base}sky-2400.webp`}
+			srcSet={`${base}sky-1200.webp 1200w, ${base}sky-2400.webp 2400w`}
+			sizes="max(100vw, 1100px)"
+			alt=""
+			aria-hidden="true"
+			fetchPriority="high"
+		/>
 	);
 }
 

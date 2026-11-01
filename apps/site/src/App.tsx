@@ -4,7 +4,7 @@ import { Features } from "./bento";
 import { KitelineDemo } from "./demo/KitelineDemo";
 import { Install } from "./install";
 import { KiteMark } from "./mark";
-import { FlyingKite, Sky } from "./sky";
+import { Clouds, FlyingKite, Sky } from "./sky";
 
 const REPO = "https://github.com/sifenfisaha/kiteline";
 
@@ -24,7 +24,6 @@ export function App() {
 		<>
 			<section className="top">
 				<Sky />
-				<FlyingKite />
 
 				<header className="nav">
 					<a className="brand" href="./">
@@ -68,11 +67,16 @@ export function App() {
 					</div>
 				</div>
 
-				<div className="frame" aria-label="Kiteline approving an edit from a phone" role="img">
-					<div className="frame__inner">
-						<KitelineDemo />
+				<div className="horizon">
+					<Clouds />
+					<div className="frame" aria-label="Kiteline approving an edit from a phone" role="img">
+						<div className="frame__inner">
+							<KitelineDemo />
+						</div>
 					</div>
 				</div>
+				{/* After the clouds, so it flies in front of them and its line still runs behind the frame. */}
+				<FlyingKite />
 			</section>
 
 			<main>
@@ -85,7 +89,9 @@ export function App() {
 				<p>
 					MIT licensed. An independent project, not made by or affiliated with Anthropic.
 					<br />
-					The demo is built with <a href="https://benji.org/stageshow">Stageshow</a> by Benji Taylor.
+					The demo is built with <a href="https://benji.org/stageshow">Stageshow</a> by Benji Taylor. Sky
+					photo by <a href="https://www.pexels.com/photo/clouds-in-the-sky-8726326/">Nothing Ahead</a> on
+					Pexels.
 				</p>
 			</footer>
 		</>

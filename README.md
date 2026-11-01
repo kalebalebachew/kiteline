@@ -161,7 +161,7 @@ packages/
   config/     Shared TypeScript config
 ```
 
-Built on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (TanStack Router, Hono, oRPC, Turborepo, Biome, PWA), with [Base UI](https://base-ui.com), [Shiki](https://shiki.style), [Phosphor](https://phosphoricons.com) icons and [Inter](https://rsms.me/inter/). The design follows the craft rules of [Stageshow](https://benji.org/stageshow), whose kit draws the demo.
+Built on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack) (TanStack Router, Hono, oRPC, Turborepo, Biome, PWA), with [Base UI](https://base-ui.com), [Shiki](https://shiki.style), [Phosphor](https://phosphoricons.com) icons and [Inter](https://rsms.me/inter/). The design follows the craft rules of [Stageshow](https://benji.org/stageshow), whose kit draws the demo. The website's sky is a photograph by [Nothing Ahead](https://www.pexels.com/@ian-panelo/) on [Pexels](https://www.pexels.com/photo/clouds-in-the-sky-8726326/), used under the [Pexels license](https://www.pexels.com/license/) rather than this project's MIT license.
 
 ## Status
 
