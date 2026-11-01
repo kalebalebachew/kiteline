@@ -45,7 +45,6 @@ export function App() {
 
 				<div className="hero">
 					<div className="hero__lead">
-						<span className="pill">Open source · Self-hosted</span>
 						<h1>
 							Your terminal,
 							<br />
