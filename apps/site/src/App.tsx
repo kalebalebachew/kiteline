@@ -34,6 +34,10 @@ export function App() {
 						<a href="#install">Install</a>
 						<a href="docs/">Docs</a>
 					</nav>
+					{/* On a phone the section links fold away; the docs stay a tap away, beside GitHub. */}
+					<a className="nav__docs" href="docs/">
+						Docs
+					</a>
 					<a className="nav__cta" href={REPO}>
 						GitHub
 					</a>

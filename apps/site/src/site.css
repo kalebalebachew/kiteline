@@ -123,6 +123,9 @@
 .nav__links a:hover {
 	color: #fff;
 }
+.nav__docs {
+	display: none;
+}
 .nav__cta {
 	margin-left: auto;
 	font-size: 15px;
@@ -276,6 +279,15 @@
 	}
 	.nav__links {
 		display: none;
+	}
+	.nav__docs {
+		display: block;
+		margin-left: auto;
+		font-size: 15px;
+		font-weight: 500;
+	}
+	.nav__docs + .nav__cta {
+		margin-left: 0;
 	}
 	.hero {
 		grid-template-columns: minmax(0, 1fr);
