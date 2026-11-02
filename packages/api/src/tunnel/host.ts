@@ -22,6 +22,8 @@ export type TunnelHooks = {
 /** More than the biggest real request: six photos at the limit, base64 in JSON. */
 const MAX_BODY = 40 * 1024 * 1024;
 const HANDSHAKE_MS = 20_000;
+/** The phone pings every 20 seconds; a tunnel that's heard nothing for three of those is dead. */
+const SILENCE_MS = 60_000;
 
 type Stream = { head: RequestHead; chunks: Uint8Array[]; size: number; abort: AbortController };
 
@@ -61,6 +63,14 @@ export async function serveTunnel(
 	const who = identity;
 	hooks.opened?.(who, (code, reason) => socket.close(code, reason));
 	socket.onClose(() => hooks.closed?.(who));
+
+	// A dead path may never say it closed; the phone's pings stopping says it instead. Closing ends the
+	// tunnel here at once, so the phone stops counting as connected.
+	let lastHeard = Date.now();
+	const watchdog = setInterval(() => {
+		if (Date.now() - lastHeard > SILENCE_MS) socket.close(1000, "silent");
+	}, 15_000);
+	socket.onClose(() => clearInterval(watchdog));
 
 	const streams = new Map<number, Stream>();
 	let sending: Promise<void> = Promise.resolve();
@@ -121,6 +131,7 @@ export async function serveTunnel(
 	try {
 		for (;;) {
 			const frame: Bytes = await socket.next();
+			lastHeard = Date.now();
 			const { type, stream: id, payload } = unpack(await cipher.open(frame));
 			switch (type) {
 				case Msg.Ping:

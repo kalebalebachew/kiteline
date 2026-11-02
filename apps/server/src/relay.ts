@@ -22,6 +22,10 @@ import {
  * answered by the same API the phone would reach directly, as that device.
  */
 
+/** How often this computer pings the relay, and how long a quiet connection lasts before it's given up. */
+const PING_MS = 20_000;
+const SILENCE_MS = 50_000;
+
 type Options = {
 	relay: string;
 	home: string;
@@ -111,23 +115,54 @@ export async function startRelay(options: Options) {
 	let connected = false;
 	let stopped = false;
 	let socket: WebSocket | null = null;
-	let silence: ReturnType<typeof setInterval> | null = null;
+	/** Stops the current connection's watchdog, when the relay connection is stopped for good. */
+	let quiet: (() => void) | null = null;
 
 	const connect = () => {
 		if (stopped) return;
 		const ws = new WebSocket(relaySocketUrl(options.relay, RelayPath.host));
 		socket = ws;
 		let lastHeard = Date.now();
+		let gone = false;
+
+		/**
+		 * Done with this connection, whether it closed or only went quiet. A dead one may never finish
+		 * closing, which can take a quarter of an hour, so this doesn't wait for it to: it reconnects.
+		 */
+		const lost = (code?: number) => {
+			if (gone) return;
+			gone = true;
+			clearInterval(watchdog);
+			try {
+				ws.close();
+			} catch {}
+			if (stopped) return;
+			if (connected) options.log("Lost the relay; reconnecting.");
+			else if (attempt === 0) {
+				const why = code === RelayClose.TooMany ? "it's full right now" : "couldn't reach it";
+				options.log(`The relay at ${options.relay} isn't answering (${why}); retrying in the background.`);
+			}
+			connected = false;
+			attempt++;
+			// Quick at first, then every half minute: a relay that restarts is back within seconds.
+			const wait = Math.min(30_000, 1000 * 2 ** Math.min(attempt, 5)) + Math.random() * 1000;
+			setTimeout(connect, wait).unref();
+		};
+
+		// The relay answers every ping; a connection that's gone quiet, or never opened, is a dead one.
+		const watchdog = setInterval(() => {
+			if (Date.now() - lastHeard > SILENCE_MS) lost();
+			else if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: "ping" } satisfies HostMessage));
+		}, PING_MS);
+		quiet = () => clearInterval(watchdog);
 
 		ws.addEventListener("open", () => {
+			if (gone) return;
+			lastHeard = Date.now();
 			ws.send(JSON.stringify({ t: "hello", secret, version: options.version } satisfies HostMessage));
-			silence = setInterval(() => {
-				// The relay answers every ping; a connection that's gone quiet is a dead one.
-				if (Date.now() - lastHeard > 75_000) ws.close();
-				else ws.send(JSON.stringify({ t: "ping" } satisfies HostMessage));
-			}, 30_000);
 		});
 		ws.addEventListener("message", (event) => {
+			if (gone) return;
 			lastHeard = Date.now();
 			let message: RelayMessage;
 			try {
@@ -150,20 +185,7 @@ export async function startRelay(options: Options) {
 				});
 			}
 		});
-		ws.addEventListener("close", (event) => {
-			if (silence) clearInterval(silence);
-			if (stopped) return;
-			if (connected) options.log("Lost the relay; reconnecting.");
-			else if (attempt === 0) {
-				const why = event.code === RelayClose.TooMany ? "it's full right now" : "couldn't reach it";
-				options.log(`The relay at ${options.relay} isn't answering (${why}); retrying in the background.`);
-			}
-			connected = false;
-			attempt++;
-			// Quick at first, then every half minute: a relay that restarts is back within seconds.
-			const wait = Math.min(30_000, 1000 * 2 ** Math.min(attempt, 5)) + Math.random() * 1000;
-			setTimeout(connect, wait).unref();
-		});
+		ws.addEventListener("close", (event) => lost(event.code));
 		ws.addEventListener("error", () => {});
 	};
 	connect();
@@ -179,7 +201,7 @@ export async function startRelay(options: Options) {
 		},
 		stop() {
 			stopped = true;
-			if (silence) clearInterval(silence);
+			quiet?.();
 			socket?.close();
 		},
 	};
