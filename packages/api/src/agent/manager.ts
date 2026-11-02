@@ -3,10 +3,19 @@ import { stat } from "node:fs/promises";
 
 import { getSessionInfo } from "@anthropic-ai/claude-agent-sdk";
 
+import { EffortCatalog } from "./effort";
 import { AsyncQueue } from "./queue";
 import { type ImageInput, Run } from "./run";
 import type { SessionTracker } from "./tracker";
-import type { PermissionDecision, PermissionModeId, RunEvent, RunSnapshot, RunSummary } from "./types";
+import type {
+	EffortChoice,
+	EffortInfo,
+	PermissionDecision,
+	PermissionModeId,
+	RunEvent,
+	RunSnapshot,
+	RunSummary,
+} from "./types";
 
 export type ManagerConfig = {
 	claudePath: string | null;
@@ -24,6 +33,8 @@ export type SendInput = {
 	images?: ImageInput[];
 	permissionMode?: PermissionModeId;
 	model?: string | null;
+	/** An effort level picked while the session wasn't running. */
+	effort?: EffortChoice;
 };
 
 export class RunManager {
@@ -35,9 +46,13 @@ export class RunManager {
 	private readonly sessionWatchers = new Map<string, Set<AsyncQueue<RunEvent>>>();
 	private readonly listWatchers = new Set<AsyncQueue<RunSummary[]>>();
 	private listTimer: ReturnType<typeof setTimeout> | null = null;
+	private readonly effort: EffortCatalog;
 
 	constructor(private readonly config: ManagerConfig) {
+		this.effort = new EffortCatalog(config.claudePath);
 		setInterval(() => this.reap(), 30_000).unref();
+		// Learning the models takes Claude Code a few seconds; do it before a phone asks.
+		setTimeout(() => void this.effort.startingPoint(null, null).catch(() => {}), 3_000).unref();
 	}
 
 	get tracker() {
@@ -78,6 +93,8 @@ export class RunManager {
 
 		const live = input.sessionId ? this.runs.get(input.sessionId) : undefined;
 		if (live?.isLive) {
+			// The phone thought it was asleep; the level it picked still comes first.
+			if (input.effort) await live.setEffort(input.effort).catch(() => {});
 			live.send(text, input.images);
 			return { sessionId: live.sessionId };
 		}
@@ -126,6 +143,7 @@ export class RunManager {
 				resume,
 				permissionMode: input.permissionMode ?? "default",
 				model: input.model ?? null,
+				...(input.effort ? { effort: input.effort } : {}),
 				claudePath: this.config.claudePath,
 				allowBypass: this.config.allowBypass,
 			},
@@ -164,6 +182,15 @@ export class RunManager {
 
 	async setModel(sessionId: string, model: string | null) {
 		await this.require(sessionId).setModel(model);
+	}
+
+	async setEffort(sessionId: string, choice: EffortChoice) {
+		await this.require(sessionId).setEffort(choice);
+	}
+
+	/** Where a session that isn't running would start, for the effort sheet. */
+	effortFor(cwd: string | null, model: string | null): Promise<EffortInfo> {
+		return this.effort.startingPoint(cwd, model);
 	}
 
 	stop(sessionId: string) {

@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-import { PERMISSION_MODES } from "../agent/types";
+import { EFFORT_LEVELS, PERMISSION_MODES } from "../agent/types";
 import { protectedProcedure } from "../index";
 
 const permissionMode = z.enum(PERMISSION_MODES);
+const effort = z.object({ level: z.enum(EFFORT_LEVELS).nullable(), persist: z.boolean() });
 
 const image = z.object({
 	mediaType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
@@ -43,6 +44,7 @@ export const runsRouter = {
 				images: z.array(image).max(6).optional(),
 				permissionMode: permissionMode.optional(),
 				model: z.string().max(100).nullable().optional(),
+				effort: effort.optional(),
 			}),
 		)
 		.handler(({ input, context }) => context.manager.send(input)),
@@ -72,6 +74,16 @@ export const runsRouter = {
 			await context.manager.setModel(input.sessionId, input.model);
 			return { ok: true };
 		}),
+
+	setEffort: protectedProcedure.input(session.extend({ effort })).handler(async ({ input, context }) => {
+		await context.manager.setEffort(input.sessionId, input.effort);
+		return { ok: true };
+	}),
+
+	/** Where a session that isn't running would start: for the effort sheet before anything is live. */
+	effortFor: protectedProcedure
+		.input(z.object({ cwd: z.string().min(1).nullable(), model: z.string().max(100).nullable() }))
+		.handler(({ input, context }) => context.manager.effortFor(input.cwd, input.model)),
 
 	stop: protectedProcedure.input(session).handler(({ input, context }) => {
 		context.manager.stop(input.sessionId);

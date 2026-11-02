@@ -7,6 +7,29 @@
 export const PERMISSION_MODES = ["default", "acceptEdits", "plan", "auto", "bypassPermissions"] as const;
 export type PermissionModeId = (typeof PERMISSION_MODES)[number];
 
+/** Claude Code's effort levels, from fastest to smartest. */
+export const EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+export type EffortLevel = (typeof EFFORT_LEVELS)[number];
+
+/**
+ * An effort level to switch to, as `/effort` does. `persist` also saves it as the default for new
+ * sessions on that model, in the same settings file the terminal writes; Claude Code never saves
+ * max. A null level puts the session back on its model's own default, like `/effort auto`.
+ */
+export type EffortChoice = { level: EffortLevel | null; persist: boolean };
+
+/** Where a session that isn't running would start: the effort sheet's view before anything is live. */
+export type EffortInfo = {
+	/** The model it would run, e.g. "claude-opus-5-5". */
+	model: string | null;
+	/** The levels that model offers, low to high: empty when it takes none, null when unknown. */
+	levels: EffortLevel[] | null;
+	/** The level it would start at: your saved default for the model, else the model's own. */
+	effort: EffortLevel | null;
+	/** The model's own default, which `/effort auto` goes back to. */
+	modelDefault: EffortLevel | null;
+};
+
 export type ToolResult = {
 	text: string;
 	isError: boolean;
@@ -46,6 +69,10 @@ export type RunMeta = {
 	claudeCodeVersion: string | null;
 	apiKeySource: string | null;
 	compacting: boolean;
+	/** The level the next turn runs at, as Claude Code reports it; null when the model takes none. */
+	effort: EffortLevel | null;
+	/** The levels the session's model offers, low to high: empty when it takes none, null until known. */
+	effortLevels: EffortLevel[] | null;
 };
 
 export type RunUsage = {

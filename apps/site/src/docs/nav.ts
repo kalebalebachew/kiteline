@@ -19,6 +19,7 @@ export const NAV: { group: string; items: { id: string; title: string }[] }[] = 
 			{ id: "approve", title: "Approve what it does" },
 			{ id: "modes", title: "Permission modes" },
 			{ id: "models", title: "Models" },
+			{ id: "effort", title: "Effort" },
 			{ id: "images", title: "Images" },
 			{ id: "commands", title: "Slash commands" },
 			{ id: "settings", title: "Settings" },

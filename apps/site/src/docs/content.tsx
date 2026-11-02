@@ -357,6 +357,49 @@ export function Content() {
 				<p>While a session runs, the pill shows the exact model in use, like "Opus 5.5".</p>
 			</Section>
 
+			<Section
+				id="effort"
+				title="Effort"
+				lead="How hard Claude thinks before it answers. Type /effort, or tap the bars next to the model."
+			>
+				<p>
+					It's the same choice as <code>/effort</code> in the terminal: a slider from Faster to Smarter, and
+					each level described the way Claude Code describes it.
+				</p>
+				<Table
+					head={["Level", "What Claude Code says about it"]}
+					rows={[
+						["low", "Quick, straightforward implementation with minimal overhead"],
+						["medium", "Balanced approach with standard implementation and testing"],
+						["high", "Comprehensive implementation with extensive testing and documentation"],
+						["xhigh", "Deeper reasoning than high, just below maximum"],
+						[
+							"max",
+							"Maximum capability with deepest reasoning. May use excessive tokens resulting in long response times or overthinking. Use sparingly for the hardest tasks.",
+						],
+					]}
+				/>
+				<ul>
+					<li>
+						<strong>Set</strong> changes this session and makes the level your default for new sessions on
+						that model, the same as Enter in the terminal. Your terminal sessions pick it up too.
+					</li>
+					<li>
+						<strong>This session only</strong> leaves your default alone.
+					</li>
+					<li>Max is always for this session only, as in the terminal.</li>
+					<li>
+						Typing works as well: <code>/effort high</code>, or any level, sets it; <code>/effort auto</code>{" "}
+						puts the session back on its model's own default.
+					</li>
+				</ul>
+				<p>
+					Models differ in what they offer. Some don't have xhigh, and a few don't take an effort level at
+					all; the slider only shows what the model in use offers. A session that's asleep shows the level it
+					would wake up at, and a level you pick then applies from your next message.
+				</p>
+			</Section>
+
 			<Section id="images" title="Images">
 				<ul>
 					<li>Tap the picture button in the reply box, or paste an image.</li>
@@ -370,9 +413,10 @@ export function Content() {
 
 			<Section id="commands" title="Slash commands">
 				<p>
-					Type <Kbd>/</Kbd> in the reply box to see commands; Enter fills in the first match. Once a session
-					is running, the list is the commands your setup really has, your own custom ones included. Before
-					that, you'll see the common ones: <code>/compact</code>, <code>/clear</code>, <code>/context</code>,{" "}
+					Type <Kbd>/</Kbd> in the reply box to see commands; Enter fills in the first match, and runs a
+					command you've typed in full. <code>/effort</code> opens the effort picker. Once a session is
+					running, the list is the commands your setup really has, your own custom ones included. Before that,
+					you'll see the common ones: <code>/compact</code>, <code>/clear</code>, <code>/context</code>,{" "}
 					<code>/cost</code>, <code>/init</code>, <code>/review</code>, <code>/memory</code> and{" "}
 					<code>/model</code>.
 				</p>

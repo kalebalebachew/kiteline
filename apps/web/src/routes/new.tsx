@@ -1,4 +1,4 @@
-import type { PermissionModeId } from "@kiteline/api/agent/types";
+import type { EffortChoice, PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
 import {
 	CaretLeftIcon,
@@ -10,10 +10,14 @@ import {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Composer, type ComposerSubmit } from "@/components/composer";
+import { EffortSheet } from "@/components/effort-sheet";
 import { FolderPicker } from "@/components/folder-picker";
+import { describeChoice, isEffortLevel } from "@/lib/effort";
 import { baseName, relativeTime, tildify } from "@/lib/format";
+import { modelLabel } from "@/lib/modes";
 import { client, orpc } from "@/lib/orpc";
 import { rememberProject, setPrefs, usePrefs } from "@/lib/prefs";
 
@@ -43,6 +47,43 @@ function NewSession() {
 	const [mode, setMode] = useState<PermissionModeId>(prefs.permissionMode);
 	const [model, setModel] = useState<string | null>(prefs.model);
 
+	// A level picked here starts the session at it; until then, it's where Claude Code would start.
+	const [effortOpen, setEffortOpen] = useState(false);
+	const [pendingEffort, setPendingEffort] = useState<EffortChoice | null>(null);
+	const startingEffort = useQuery(
+		orpc.runs.effortFor.queryOptions({
+			input: { cwd: selected, model },
+			enabled: !!selected,
+			staleTime: 30_000,
+		}),
+	);
+	const effortLevel = pendingEffort
+		? (pendingEffort.level ?? startingEffort.data?.modelDefault ?? null)
+		: (startingEffort.data?.effort ?? null);
+	const effortLevels = startingEffort.data?.levels ?? null;
+	const effortModel = modelLabel(startingEffort.data?.model ?? model);
+
+	const chooseEffort = async (choice: EffortChoice) => {
+		setPendingEffort(choice);
+		const { title, description } = describeChoice(choice, {
+			levels: effortLevels,
+			modelName: effortModel,
+			modelDefault: startingEffort.data?.modelDefault,
+			later: true,
+		});
+		toast.success(title, description ? { description } : undefined);
+	};
+
+	const onLocalCommand = (name: string, args: string) => {
+		if (name !== "effort") return false;
+		const word = args.toLowerCase();
+		if (!word) setEffortOpen(true);
+		else if (word === "auto" || word === "unset") void chooseEffort({ level: null, persist: false });
+		else if (isEffortLevel(word)) void chooseEffort({ level: word, persist: true });
+		else return false;
+		return true;
+	};
+
 	const left = useRef(false);
 	useEffect(
 		() => () => {
@@ -60,6 +101,7 @@ function NewSession() {
 				images: value.images.map(({ mediaType, data }) => ({ mediaType, data })),
 				permissionMode: mode,
 				model,
+				effort: pendingEffort ?? undefined,
 			});
 		},
 		onSuccess: ({ sessionId }) => {
@@ -175,6 +217,8 @@ function NewSession() {
 						}}
 						allowBypass={system.data?.allowBypass ?? true}
 						model={model}
+						effort={{ level: effortLevel, levels: effortLevels, onOpen: () => setEffortOpen(true) }}
+						onLocalCommand={onLocalCommand}
 						onModelChange={(m) => {
 							setModel(m);
 							setPrefs({ model: m });
@@ -183,6 +227,14 @@ function NewSession() {
 				</div>
 			</div>
 
+			<EffortSheet
+				open={effortOpen}
+				onOpenChange={setEffortOpen}
+				current={effortLevel}
+				levels={effortLevels}
+				modelName={effortModel}
+				onChoose={chooseEffort}
+			/>
 			<FolderPicker open={picking} onOpenChange={setPicking} start={selected} onPick={setCwd} />
 		</div>
 	);

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
 	type CanUseTool,
+	type ModelInfo,
 	type PermissionResult,
 	type PermissionUpdate,
 	type Query,
@@ -11,9 +12,12 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 
 import { describeAlways } from "./always";
+import { appliedSettings, findModel, levelsOf } from "./effort";
 import { assistantItems, trimInput, userParts } from "./normalize";
 import { AsyncQueue } from "./queue";
 import type {
+	EffortChoice,
+	EffortLevel,
 	Item,
 	PermissionDecision,
 	PermissionModeId,
@@ -36,6 +40,8 @@ export type RunOptions = {
 	resume: boolean;
 	permissionMode: PermissionModeId;
 	model: string | null;
+	/** An effort level picked while the session wasn't running, to start at. */
+	effort?: EffortChoice;
 	claudePath: string | null;
 	allowBypass: boolean;
 };
@@ -78,6 +84,9 @@ export class Run {
 	private stateEvents = false;
 	/** Messages Stop cancelled, to move after the cut-off reply once the stopped turn ends. */
 	private cancelled = new Set<string>();
+	/** Holds messages back until the session's effort is set, when the start options can't carry it. */
+	private hold: Promise<void> | null = null;
+	private modelList: Promise<ModelInfo[]> | null = null;
 
 	constructor(
 		options: RunOptions,
@@ -93,6 +102,8 @@ export class Run {
 			claudeCodeVersion: null,
 			apiKeySource: null,
 			compacting: false,
+			effort: options.effort?.level ?? null,
+			effortLevels: null,
 		};
 
 		this.q = query({
@@ -103,6 +114,7 @@ export class Run {
 				permissionMode: options.permissionMode,
 				allowDangerouslySkipPermissions: options.allowBypass,
 				...(options.model ? { model: options.model } : {}),
+				...(options.effort?.level ? { effort: options.effort.level } : {}),
 				...(options.claudePath ? { pathToClaudeCodeExecutable: options.claudePath } : {}),
 				includePartialMessages: true,
 				systemPrompt: { type: "preset", preset: "claude_code", append: PHONE_NOTE },
@@ -117,7 +129,42 @@ export class Run {
 			},
 		});
 
+		this.prepare(options.effort);
 		void this.pump();
+	}
+
+	/**
+	 * The effort the start options can't carry. Going back to the model's own default has to land
+	 * before the first message is read, so that message waits for it; saving a level as the default
+	 * for new sessions needn't. Then the meta reports the level Claude Code really runs at.
+	 */
+	private prepare(choice: EffortChoice | undefined) {
+		const ready = this.q.initializationResult().then(async () => {
+			if (choice?.level === null) await this.q.applyFlagSettings({ effortLevel: null });
+		});
+		const settled = ready.catch(() => {});
+		if (choice?.level === null) {
+			this.hold = settled;
+			void settled.then(() => {
+				this.hold = null;
+			});
+		}
+		void settled.then(async () => {
+			const level = choice?.persist ? choice.level : null;
+			if (level && level !== "max") {
+				await this.q.updateSettings("userSettings", { effortLevel: level }).catch((error: unknown) => {
+					// A process that never started has its own error to show.
+					if (!this.isLive) return;
+					this.push({
+						kind: "notice",
+						id: randomUUID(),
+						tone: "warn",
+						text: `Couldn't save ${level} as your default effort: ${error instanceof Error ? error.message : String(error)}`,
+					});
+				});
+			}
+			await this.refreshEffort();
+		});
 	}
 
 	snapshot(): RunSnapshot {
@@ -159,13 +206,16 @@ export class Run {
 		this.push({ kind: "user", id: uuid, text, images: images.length, ...(command ? { command } : {}) });
 		if (!this.title && trimmed) this.title = trimmed.slice(0, 120);
 
-		this.input.push({
+		const message: SDKUserMessage = {
 			type: "user",
 			uuid,
 			session_id: this.sessionId,
 			parent_tool_use_id: null,
 			message: { role: "user", content },
-		});
+		};
+		// Held messages go in order: everything waits behind the same promise.
+		if (this.hold) void this.hold.then(() => this.input.push(message));
+		else this.input.push(message);
 		this.turnsOwed++;
 		// A message sent while a request waits for you doesn't unblock it: still waiting.
 		this.setStatus(this.pending.size ? "waiting" : "running");
@@ -244,6 +294,46 @@ export class Run {
 	async setModel(model: string | null) {
 		await this.q.setModel(model ?? undefined);
 		this.updateMeta({ model });
+		// Another model can offer other levels, and runs one it lacks as high.
+		await this.refreshEffort();
+	}
+
+	/** `/effort`: this session's level now and, unless it's max, the default for new sessions too. */
+	async setEffort({ level, persist }: EffortChoice) {
+		await this.q.applyFlagSettings({ effortLevel: level });
+		if (persist && level && level !== "max") {
+			try {
+				await this.q.updateSettings("userSettings", { effortLevel: level });
+			} catch (error) {
+				await this.refreshEffort();
+				const why = error instanceof Error ? error.message : String(error);
+				throw new Error(`This session is on ${level} now, but it couldn't be saved as your default: ${why}`);
+			}
+		}
+		await this.refreshEffort();
+	}
+
+	/** The model and effort level Claude Code will use next, and the levels that model offers. */
+	private async refreshEffort() {
+		try {
+			const [applied, models] = await Promise.all([appliedSettings(this.q), this.models()]);
+			const model = applied?.model ?? this.meta.model;
+			const entry = findModel(models, model);
+			const patch: Partial<RunMeta> = { effortLevels: entry ? levelsOf(entry) : null };
+			if (applied?.model) patch.model = applied.model;
+			if (applied) patch.effort = (applied.effort as EffortLevel | null | undefined) ?? null;
+			this.updateMeta(patch);
+		} catch {
+			// A process on its way out can't answer; the meta keeps what it last knew.
+		}
+	}
+
+	private models() {
+		this.modelList ??= this.q.supportedModels().catch(() => {
+			this.modelList = null;
+			return [];
+		});
+		return this.modelList;
 	}
 
 	close() {
@@ -392,6 +482,8 @@ export class Run {
 					!(m.queued_turn_count && m.queued_turn_count > 0)
 				)
 					this.setStatus("idle");
+				// A /model or /effort typed as a message changes them inside Claude Code.
+				void this.refreshEffort();
 				break;
 			}
 			case "system":
@@ -410,6 +502,7 @@ export class Run {
 					claudeCodeVersion: m.claude_code_version,
 					apiKeySource: m.apiKeySource,
 				});
+				void this.refreshEffort();
 				if (this.status === "starting") this.setStatus("running");
 				break;
 			case "status":
@@ -480,7 +573,10 @@ export class Run {
 	}
 
 	private updateMeta(patch: Partial<RunMeta>) {
-		this.meta = { ...this.meta, ...patch };
+		const next = { ...this.meta, ...patch };
+		// Claude Code is asked again after every turn; most answers change nothing.
+		if (JSON.stringify(next) === JSON.stringify(this.meta)) return;
+		this.meta = next;
 		this.emit({ type: "meta", meta: this.meta });
 	}
 

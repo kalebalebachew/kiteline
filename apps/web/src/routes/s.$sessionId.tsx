@@ -1,4 +1,4 @@
-import type { PermissionDecision, PermissionModeId } from "@kiteline/api/agent/types";
+import type { EffortChoice, PermissionDecision, PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
 import {
 	ArrowDownIcon,
@@ -20,12 +20,15 @@ import { toast } from "sonner";
 import type { ComposerSubmit } from "@/components/composer";
 import { Composer } from "@/components/composer";
 import { copyText } from "@/components/copy-button";
+import { EffortSheet } from "@/components/effort-sheet";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/menu";
 import { PermissionSheet } from "@/components/permission-sheet";
 import { RenameSheet } from "@/components/rename-sheet";
 import { type DisplayStatus, StatusPill } from "@/components/status";
 import { Timeline, WorkingLine } from "@/components/timeline/timeline";
+import { describeChoice, isEffortLevel } from "@/lib/effort";
 import { baseName, formatCost, relativeTime } from "@/lib/format";
+import { modelLabel } from "@/lib/modes";
 import { client, errorMessage, orpc } from "@/lib/orpc";
 import { setPrefs, usePrefs } from "@/lib/prefs";
 import { mergeTimeline, useHistory, useRunStream } from "@/lib/session";
@@ -67,6 +70,25 @@ function SessionPage() {
 	const [model, setModel] = useState<string | null>(prefs.model);
 	const liveMode = live ? (run.meta.permissionMode ?? mode) : mode;
 
+	// Effort: a live process says what it runs at. Asleep, it's what the next message would wake to:
+	// a level picked here meanwhile, else where Claude Code would start it.
+	const [effortOpen, setEffortOpen] = useState(false);
+	const [pendingEffort, setPendingEffort] = useState<EffortChoice | null>(null);
+	const startingEffort = useQuery(
+		orpc.runs.effortFor.queryOptions({ input: { cwd, model }, enabled: !live && !!cwd, staleTime: 30_000 }),
+	);
+	const asleepLevel = pendingEffort
+		? (pendingEffort.level ?? startingEffort.data?.modelDefault ?? null)
+		: (startingEffort.data?.effort ?? null);
+	const effort = live
+		? { level: run.meta.effort, levels: run.meta.effortLevels, model: run.meta.model }
+		: {
+				level: asleepLevel,
+				levels: startingEffort.data?.levels ?? null,
+				model: startingEffort.data?.model ?? model,
+			};
+	const effortModel = effort.model ? modelLabel(effort.model) : null;
+
 	const permissions = run?.permissions ?? [];
 	const pendingIds = useMemo(() => new Set(permissions.map((p) => p.id)), [permissions]);
 	const [sheetFor, setSheetFor] = useState<string | null>(null);
@@ -96,16 +118,61 @@ function SessionPage() {
 	const { away, scrollToBottom } = useStickToBottom(content, !history.isLoading);
 
 	const send = useMutation({
-		mutationFn: (value: ComposerSubmit) =>
-			client.runs.send({
-				sessionId,
-				text: value.text,
-				images: value.images.map(({ mediaType, data }) => ({ mediaType, data })),
-				permissionMode: liveMode,
-				model,
-			}),
+		mutationFn: async (value: ComposerSubmit) => {
+			// A level picked while asleep wakes the session with it.
+			const effortChoice = live ? undefined : (pendingEffort ?? undefined);
+			if (effortChoice) setPendingEffort(null);
+			try {
+				return await client.runs.send({
+					sessionId,
+					text: value.text,
+					images: value.images.map(({ mediaType, data }) => ({ mediaType, data })),
+					permissionMode: liveMode,
+					model,
+					effort: effortChoice,
+				});
+			} catch (error) {
+				if (effortChoice) setPendingEffort(effortChoice);
+				throw error;
+			}
+		},
 		onSuccess: () => scrollToBottom("smooth"),
 	});
+
+	// Woken from somewhere else with a level still waiting here: it applies now.
+	useEffect(() => {
+		if (!live || !pendingEffort) return;
+		setPendingEffort(null);
+		void client.runs
+			.setEffort({ sessionId, effort: pendingEffort })
+			.catch((e) => toast.error(errorMessage(e)));
+	}, [live, pendingEffort, sessionId]);
+
+	const chooseEffort = async (choice: EffortChoice) => {
+		if (live) await client.runs.setEffort({ sessionId, effort: choice });
+		else setPendingEffort(choice);
+		const { title, description } = describeChoice(choice, {
+			levels: effort.levels,
+			modelName: effortModel,
+			modelDefault: startingEffort.data?.modelDefault,
+			later: !live,
+		});
+		toast.success(title, description ? { description } : undefined);
+	};
+
+	// /effort opens the sheet; /effort high, max or auto sets it. Anything else after /effort, like
+	// ultracode, goes to Claude Code, which answers it.
+	const onLocalCommand = (name: string, args: string) => {
+		if (name !== "effort") return false;
+		const word = args.toLowerCase();
+		if (!word) setEffortOpen(true);
+		else if (word === "auto" || word === "unset")
+			void chooseEffort({ level: null, persist: false }).catch((e) => toast.error(errorMessage(e)));
+		else if (isEffortLevel(word))
+			void chooseEffort({ level: word, persist: true }).catch((e) => toast.error(errorMessage(e)));
+		else return false;
+		return true;
+	};
 
 	const decide = async (id: string, decision: PermissionDecision) => {
 		try {
@@ -343,6 +410,8 @@ function SessionPage() {
 						model={model}
 						modelInUse={live ? run.meta.model : null}
 						onModelChange={(m) => void changeModel(m)}
+						effort={{ level: effort.level, levels: effort.levels, onOpen: () => setEffortOpen(true) }}
+						onLocalCommand={onLocalCommand}
 					/>
 				</div>
 			</div>
@@ -360,6 +429,15 @@ function SessionPage() {
 					}
 				}}
 				onDecide={decide}
+			/>
+
+			<EffortSheet
+				open={effortOpen}
+				onOpenChange={setEffortOpen}
+				current={effort.level}
+				levels={effort.levels}
+				modelName={effortModel}
+				onChoose={chooseEffort}
 			/>
 
 			<RenameSheet

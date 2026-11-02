@@ -1,1 +1,85 @@
 @import "@kiteline/ui/globals.css";
+
+/* Effort levels in Claude Code's colors: low amber, medium green, high blue, xhigh violet, max a rainbow. */
+:root {
+	--effort-low: var(--warning);
+	--effort-medium: var(--success);
+	--effort-high: var(--brand-text);
+	--effort-xhigh: #7c5cff;
+	--effort-rainbow: linear-gradient(
+		90deg,
+		#e5484d,
+		#ec6a0c,
+		#c99400,
+		#23a35a,
+		#0a84ff,
+		#7c5cff,
+		#d6409f,
+		#e5484d
+	);
+}
+
+.dark {
+	--effort-xhigh: #a594ff;
+	--effort-rainbow: linear-gradient(
+		90deg,
+		#ff6369,
+		#ff8b3e,
+		#f5c400,
+		#4cc38a,
+		#52a9ff,
+		#a594ff,
+		#f076c0,
+		#ff6369
+	);
+}
+
+@layer components {
+	/* xhigh: violet with a light passing over it, as the terminal draws it. */
+	.effort-shimmer {
+		background-image: linear-gradient(
+			90deg,
+			var(--effort-xhigh) 0% 38%,
+			color-mix(in oklab, var(--effort-xhigh) 40%, white) 50%,
+			var(--effort-xhigh) 62% 100%
+		);
+		background-size: 250% 100%;
+		background-repeat: no-repeat;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		animation: effort-shimmer 2.6s ease-in-out infinite;
+	}
+	/* max: the rainbow, moving. */
+	.effort-rainbow,
+	.effort-rainbow-fill {
+		background-image: var(--effort-rainbow);
+		background-size: 200% 100%;
+		animation: effort-rainbow 4s linear infinite;
+	}
+	.effort-rainbow {
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+	@keyframes effort-shimmer {
+		from {
+			background-position: 100% 0;
+		}
+		to {
+			background-position: 0% 0;
+		}
+	}
+	@keyframes effort-rainbow {
+		to {
+			background-position: 200% 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.effort-shimmer,
+		.effort-rainbow,
+		.effort-rainbow-fill {
+			animation: none;
+		}
+	}
+}

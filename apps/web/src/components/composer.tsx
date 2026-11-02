@@ -1,16 +1,20 @@
 import type { PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
-import { ArrowUpIcon, CaretDownIcon, CpuIcon, ImageSquareIcon, StopIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowUpIcon, ImageSquareIcon, StopIcon, XIcon } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import type { EffortLevel } from "@/lib/effort";
 import { type Attachment, toAttachment } from "@/lib/images";
 import { MODELS, MODES, modeInfo, modelLabel } from "@/lib/modes";
 import { usePrefs } from "@/lib/prefs";
 
+import { EffortGlyph } from "./effort-sheet";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "./menu";
 
 const FALLBACK_COMMANDS = ["compact", "clear", "context", "cost", "init", "review", "memory", "model"];
+/** Commands Kiteline answers itself, so they're offered whatever Claude Code lists. */
+const LOCAL_COMMANDS = ["effort"];
 const MAX_IMAGES = 6;
 
 /** Unsent text, kept per conversation on this device so leaving the page or a reload doesn't lose it. */
@@ -46,6 +50,10 @@ type ComposerProps = {
 	model: string | null;
 	modelInUse?: string | null;
 	onModelChange: (model: string | null) => void;
+	/** The effort chip: the level and the levels the model offers. Tapping it opens the effort sheet. */
+	effort?: { level: EffortLevel | null; levels: EffortLevel[] | null; onOpen: () => void };
+	/** Commands Kiteline answers itself, like /effort. True means it was handled here, not sent. */
+	onLocalCommand?: (name: string, args: string) => boolean;
 	autoFocus?: boolean;
 	/** Where to keep the unsent draft, e.g. the session id. */
 	draftKey?: string;
@@ -65,6 +73,8 @@ export function Composer({
 	model,
 	modelInUse,
 	onModelChange,
+	effort,
+	onLocalCommand,
 	autoFocus,
 	draftKey,
 }: ComposerProps) {
@@ -90,7 +100,9 @@ export function Composer({
 	const commandQuery = /^\/([\w:-]*)$/.exec(text)?.[1];
 	const commands = useMemo(() => {
 		if (commandQuery === undefined) return [];
-		const all = (slashCommands?.length ? slashCommands : FALLBACK_COMMANDS).map((c) => c.replace(/^\//, ""));
+		const all = [...(slashCommands?.length ? slashCommands : FALLBACK_COMMANDS), ...LOCAL_COMMANDS].map((c) =>
+			c.replace(/^\//, ""),
+		);
 		return [...new Set(all)].filter((c) => c.toLowerCase().includes(commandQuery.toLowerCase())).slice(0, 7);
 	}, [commandQuery, slashCommands]);
 
@@ -101,6 +113,12 @@ export function Composer({
 
 	async function submit() {
 		if (!canSend) return;
+		// /effort and friends open here instead of going to Claude Code.
+		const command = images.length ? null : /^\/([\w:-]+)(?:\s+([\s\S]*))?$/.exec(text.trim());
+		if (command?.[1] && onLocalCommand?.(command[1], command[2]?.trim() ?? "")) {
+			setText("");
+			return;
+		}
 		const sent = { text: text.trim(), images };
 		const ok = await onSubmit(sent);
 		if (ok) {
@@ -116,7 +134,8 @@ export function Composer({
 		// reports it with keyCode 229 rather than isComposing.
 		if (event.nativeEvent.isComposing || event.keyCode === 229) return;
 		if (event.key === "Enter" && !event.shiftKey) {
-			if (commands.length && commandQuery !== undefined) {
+			// Enter completes a command; once it's typed in full, Enter runs it, as in the terminal.
+			if (commands.length && commandQuery !== undefined && !commands.includes(commandQuery)) {
 				event.preventDefault();
 				setText(`/${commands[0]} `);
 				return;
@@ -216,7 +235,7 @@ export function Composer({
 					className="placeholder:text-faint block max-h-[38dvh] min-h-12 w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[16px] leading-relaxed outline-none focus-visible:outline-none disabled:opacity-50"
 				/>
 
-				<div className="flex items-center gap-1.5 px-2.5 pt-1 pb-2.5">
+				<div className="@container flex items-center gap-1 px-2.5 pt-1 pb-2.5">
 					<input
 						ref={fileInput}
 						type="file"
@@ -240,14 +259,13 @@ export function Composer({
 					<Menu>
 						<MenuTrigger
 							className={cn(
-								"bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground data-popup-open:bg-surface-3 inline-flex h-8 flex-none items-center gap-1.5 rounded-full pr-2.5 pl-3 text-[13px] font-medium transition-colors",
+								"bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground data-popup-open:bg-surface-3 inline-flex h-8 flex-none items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors",
 								mode === "bypassPermissions" && "bg-destructive-soft text-destructive",
 								mode === "plan" && "bg-brand-soft text-brand-text",
 							)}
 						>
 							<ModeIcon weight="fill" className="size-3.5" />
 							<span className="trim">{modeMeta.short}</span>
-							<CaretDownIcon weight="bold" className="size-3 opacity-60" />
 						</MenuTrigger>
 						<MenuContent className="w-72">
 							<MenuRadioGroup value={mode} onValueChange={onModeChange} label="Permissions">
@@ -266,10 +284,10 @@ export function Composer({
 					</Menu>
 
 					<Menu>
-						<MenuTrigger className="bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground data-popup-open:bg-surface-3 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full pr-2.5 pl-3 text-[13px] font-medium transition-colors">
-							<CpuIcon weight="fill" className="size-3.5 flex-none" />
-							<span className="truncate">{modelLabel(modelInUse ?? model)}</span>
-							<CaretDownIcon weight="bold" className="size-3 flex-none opacity-60" />
+						<MenuTrigger className="bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground data-popup-open:bg-surface-3 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors">
+							<span className="trim overflow-x-clip text-ellipsis whitespace-nowrap">
+								{modelLabel(modelInUse ?? model)}
+							</span>
 						</MenuTrigger>
 						<MenuContent className="w-64">
 							<MenuRadioGroup
@@ -288,6 +306,19 @@ export function Composer({
 							</MenuRadioGroup>
 						</MenuContent>
 					</Menu>
+
+					{effort && effort.levels?.length !== 0 ? (
+						<button
+							type="button"
+							onClick={effort.onOpen}
+							aria-label={`Effort: ${effort.level ?? "auto"}. Change it`}
+							className="bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground inline-flex h-8 flex-none items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium transition-colors @[21rem]:pr-3"
+						>
+							<EffortGlyph level={effort.level} className="size-3.5 flex-none" />
+							{/* On the narrowest phones the bars say it alone, so the model keeps its name. */}
+							<span className="trim hidden @[21rem]:inline">{effort.level ?? "auto"}</span>
+						</button>
+					) : null}
 
 					<div className="ml-auto flex-none">
 						{showStop ? (

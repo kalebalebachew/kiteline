@@ -19,7 +19,7 @@ It's self-hosted: your phone talks straight to your computer, and Claude Code ke
 - **Pick up where you left off,** or start a new session in any project.
 - **Watch it work.** Replies stream in, with every command and edit laid out step by step.
 - **Approve from anywhere.** Allow, deny with a note, or always allow, right from your phone.
-- **Your modes, your models.** Change how much it asks, and which model it uses, mid-session.
+- **Your modes, your models, your effort.** Change how much it asks, which model it uses and how hard it thinks, mid-session. `/effort` works just like in the terminal.
 - **Feels like an app.** Add it to your home screen, in light or dark.
 
 ## Quick start
