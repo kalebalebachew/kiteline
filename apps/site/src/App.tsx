@@ -83,7 +83,11 @@ export function App() {
 			</main>
 
 			<footer className="footer">
-				<p>MIT licensed. An independent project, not made by or affiliated with Anthropic.</p>
+				<p>
+					MIT licensed. An independent project, not made by or affiliated with Anthropic.
+					<br />
+					Built by <a href="https://www.seefun.dev">seefun.dev</a>
+				</p>
 			</footer>
 			<ScrollBar />
 		</>
