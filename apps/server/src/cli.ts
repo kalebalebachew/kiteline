@@ -10,8 +10,11 @@ const HELP = `
      Drive Claude Code on this computer from your phone.
 
   ${bold("Usage")}
-    kiteline                     Start Kiteline and show the code that pairs your phone
-    kiteline pair                Show the pairing code again, while Kiteline runs
+    kiteline                     Start Kiteline; the first time, it shows a code to pair your phone
+    kiteline pair                Pair a phone: a code that works once, then you allow the phone
+    kiteline devices             See the paired devices, and when each was last used
+    kiteline devices remove <name or id>
+                                 Unpair one device; with --all, every one
     kiteline service install     Keep it running in the background, from startup (Linux)
     kiteline service uninstall   Take the background service away
     kiteline service             Say whether it's running in the background
@@ -24,7 +27,6 @@ const HELP = `
                                  the pairing code points there
         --relay                  Reach this computer from anywhere, through Kiteline's relay.
                                  Sealed end to end: the relay passes your sessions on unread
-        --new-token              Make a new pairing code, so every device pairs again
         --force                  With service install: replace a service set up by hand
     -v, --version                Show the version
     -h, --help                   Show this
@@ -54,6 +56,7 @@ function parse() {
 			host: { type: "string" },
 			"public-url": { type: "string" },
 			"new-token": { type: "boolean" },
+			all: { type: "boolean" },
 			relay: { type: "boolean" },
 			force: { type: "boolean" },
 			help: { type: "boolean", short: "h" },
@@ -99,7 +102,20 @@ if (values.relay) process.env.KITELINE_RELAY ||= "on";
 startedFromCli();
 
 const [command, action, ...rest] = positionals;
-if (rest.length) fail(`"${rest.join(" ")}" isn't something Kiteline takes. Run ${bold("kiteline --help")}.`);
+// Only a device's name can run to several words: `kiteline devices remove iPhone · Safari`.
+if (rest.length && !(command === "devices" && action !== undefined))
+	fail(`"${rest.join(" ")}" isn't something Kiteline takes. Run ${bold("kiteline --help")}.`);
+
+/** The commands that talk to the Kiteline already running, with what to do when it isn't. */
+async function talk<T>(run: () => Promise<T>) {
+	const { Unreachable } = await import("./control");
+	try {
+		return await run();
+	} catch (error) {
+		if (error instanceof Unreachable) fail(error.message);
+		throw error;
+	}
+}
 
 switch (command) {
 	case undefined:
@@ -108,8 +124,15 @@ switch (command) {
 		await import("./index");
 		break;
 	case "pair": {
-		const { showPairing } = await import("./show-pairing");
-		await showPairing();
+		if (action) fail(`"${action}" isn't something kiteline pair takes. Run ${bold("kiteline --help")}.`);
+		const { pairCommand } = await import("./pair-command");
+		process.exit((await talk(pairCommand)) ? 0 : 1);
+		break;
+	}
+	case "devices": {
+		const { devicesCommand } = await import("./devices-command");
+		await talk(() => devicesCommand(action, rest.join(" "), { all: values.all === true }));
+		process.exit(0);
 		break;
 	}
 	case "service": {

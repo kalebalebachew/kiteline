@@ -1,9 +1,23 @@
-import { type Bytes, type Cipher, HandshakeError, respond, type SecretKey } from "./crypto";
+import {
+	type Bytes,
+	type Cipher,
+	HandshakeError,
+	type Identity,
+	type KeyLookup,
+	respond,
+	UnknownKey,
+} from "./crypto";
 import { CHUNK, Msg, type MsgType, pack, parseJson, type RequestHead, text, unpack } from "./messages";
 import { RelayClose } from "./relay-protocol";
 import { FrameSocket } from "./socket";
 
-export type TunnelHandler = (request: Request) => Promise<Response>;
+export type TunnelHandler = (request: Request, identity: Identity) => Promise<Response>;
+
+export type TunnelHooks = {
+	/** The phone proved its key. `close` ends the tunnel, say when that device is removed. */
+	opened?: (identity: Identity, close: (code: number, reason: string) => void) => void;
+	closed?: (identity: Identity) => void;
+};
 
 /** More than the biggest real request: six photos at the limit, base64 in JSON. */
 const MAX_BODY = 40 * 1024 * 1024;
@@ -12,28 +26,41 @@ const HANDSHAKE_MS = 20_000;
 type Stream = { head: RequestHead; chunks: Uint8Array[]; size: number; abort: AbortController };
 
 /**
- * The computer's end of one phone's tunnel. Answers the handshake, refuses a phone that can't prove
- * the pairing, then turns each request into a `Request` for `handle` and streams the answer back.
+ * The computer's end of one phone's tunnel. Answers the handshake with the key the phone names,
+ * refuses a phone that can't prove it, then turns each request into a `Request` for `handle`, saying
+ * who it's from, and streams the answer back.
  */
-export async function serveTunnel(ws: WebSocket, secret: SecretKey, handle: TunnelHandler) {
+export async function serveTunnel(
+	ws: WebSocket,
+	keyFor: KeyLookup,
+	handle: TunnelHandler,
+	hooks: TunnelHooks = {},
+) {
 	const socket = new FrameSocket(ws);
 	let cipher: Cipher;
+	let identity: Identity;
 	try {
 		const hello = await socket.next(HANDSHAKE_MS);
-		cipher = await respond(
-			secret,
+		({ cipher, identity } = await respond(
+			keyFor,
 			hello,
 			(frame) => socket.send(frame),
 			() => socket.next(HANDSHAKE_MS),
-		);
+		));
 	} catch (error) {
+		// The reason tells a phone whether its pairing is gone or its pairing code is.
+		const reason =
+			error instanceof UnknownKey && error.identity.kind === "pairing" ? "code expired" : "not paired";
 		const unpaired = error instanceof HandshakeError;
 		socket.close(
 			unpaired ? RelayClose.NotPaired : RelayClose.BadRequest,
-			unpaired ? "not paired" : "bad handshake",
+			unpaired ? reason : "bad handshake",
 		);
 		return;
 	}
+	const who = identity;
+	hooks.opened?.(who, (code, reason) => socket.close(code, reason));
+	socket.onClose(() => hooks.closed?.(who));
 
 	const streams = new Map<number, Stream>();
 	let sending: Promise<void> = Promise.resolve();
@@ -64,7 +91,7 @@ export async function serveTunnel(ws: WebSocket, secret: SecretKey, handle: Tunn
 				body,
 				signal: stream.abort.signal,
 			});
-			const response = await handle(request);
+			const response = await handle(request, who);
 			if (!streams.has(id)) return;
 			await post(
 				Msg.Response,

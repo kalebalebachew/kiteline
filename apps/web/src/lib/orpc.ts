@@ -5,7 +5,7 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { onRelay, relayFetch } from "./relay";
+import { onRelay, onUnpaired, relayFetch } from "./relay";
 
 export function isUnauthorized(error: unknown) {
 	return error instanceof ORPCError && error.code === "UNAUTHORIZED";
@@ -16,11 +16,13 @@ export function errorMessage(error: unknown) {
 	return "Something went wrong.";
 }
 
+/** This phone was paired and isn't now: removed, most likely. Back to pairing, saying why. */
+export function lostPairing() {
+	queryClient.setQueryData(["auth"], { authed: false, stale: true });
+}
+
 function onError(error: unknown) {
-	if (isUnauthorized(error)) {
-		queryClient.setQueryData(["auth"], { authed: false });
-		return;
-	}
+	if (isUnauthorized(error)) return lostPairing();
 	toast.error(errorMessage(error));
 }
 
@@ -41,3 +43,5 @@ export const link = new RPCLink({
 export const client: AppRouterClient = createORPCClient(link);
 
 export const orpc = createTanstackQueryUtils(client);
+
+onUnpaired(lostPairing);

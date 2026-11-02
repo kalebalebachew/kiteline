@@ -1,10 +1,11 @@
 /**
  * End-to-end encryption between a phone and its computer, across a relay that only passes bytes on.
  *
- * Both sides hold the device secret a pairing stands for. The handshake mixes it with a fresh P-256
- * key exchange: the relay sees the public halves, but without the secret it can't derive the keys,
- * and each side proves it has them before anything else is sent. Every message after that is
- * AES-256-GCM with its own key per direction and a counter for a nonce, so a message can't be read,
+ * Both sides hold a secret: the key a paired phone was given, or, while it asks to pair, the one-time
+ * code it scanned. The phone says which key it holds by name, and the handshake mixes that key with a
+ * fresh P-256 key exchange: the relay sees the public halves, but without the secret it can't derive
+ * the keys, and each side proves it has them before anything else is sent. Every message after that
+ * is AES-256-GCM with its own key per direction and a counter for a nonce, so a message can't be read,
  * altered, replayed or reordered on the way. Fresh keys each connection: a secret that leaks later
  * opens no earlier conversation.
  *
@@ -16,18 +17,42 @@ export type Bytes = Uint8Array<ArrayBuffer>;
 export type SecretKey = Awaited<ReturnType<typeof crypto.subtle.importKey>>;
 
 const encoder = new TextEncoder();
-const LABEL = encoder.encode("kiteline-tunnel-v1");
-const AAD = encoder.encode("kiteline-tunnel-v1/message");
+const decoder = new TextDecoder();
+const LABEL = encoder.encode("kiteline-tunnel-v2");
+const AAD = encoder.encode("kiteline-tunnel-v2/message");
 
-export const TUNNEL_VERSION = 1;
+export const TUNNEL_VERSION = 2;
 const PUBLIC_KEY_BYTES = 65;
 const NONCE_BYTES = 16;
 const CONFIRM_BYTES = 32;
+/** A key's name: a device's id, or a pairing code's. Always 22 base64url characters. */
+const ID_BYTES = 22;
+const HELLO_BYTES = 3 + ID_BYTES + PUBLIC_KEY_BYTES + NONCE_BYTES;
 
 /** Handshake frames, then sealed messages. The first byte says which. */
 export const Frame = { Hello: 1, Welcome: 2, Confirm: 3, Sealed: 0x10 } as const;
 
+/** Which key a phone holds: a paired device's own, or a one-time code that only lets it ask to pair. */
+export type KeyKind = "device" | "pairing";
+export type Identity = { kind: KeyKind; id: string };
+const KINDS: Record<number, KeyKind> = { 1: "device", 2: "pairing" };
+const KIND_BYTE: Record<KeyKind, number> = { device: 1, pairing: 2 };
+
+/** The computer's keys, by the name a phone gives. Null for a name it doesn't know. */
+export type KeyLookup = (identity: Identity) => SecretKey | null | Promise<SecretKey | null>;
+
 export class HandshakeError extends Error {}
+
+/** The phone named a key this computer doesn't hold: never paired, removed, or a code that's done. */
+export class UnknownKey extends HandshakeError {
+	constructor(readonly identity: Identity) {
+		super(
+			identity.kind === "pairing"
+				? "That pairing code has expired or was already used."
+				: "This phone isn't paired with this computer.",
+		);
+	}
+}
 
 export function concat(...parts: Uint8Array[]): Bytes {
 	const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
@@ -43,21 +68,40 @@ function random(length: number): Bytes {
 	return crypto.getRandomValues(new Uint8Array(length));
 }
 
-/** What a pairing token stands for on every device: the same value the computer's cookie holds. */
-export async function deviceSecret(token: string): Promise<Bytes> {
+function base64Url(bytes: Uint8Array) {
+	let binary = "";
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * A one-time pairing code as a tunnel key, and the name it goes by. The name is a hash, so the relay,
+ * which sees it, learns nothing it could pair with.
+ */
+export async function pairingKey(code: string): Promise<{ id: string; secret: Bytes }> {
+	const id = base64Url(await sha256(encoder.encode(`kiteline-pair-id/${code}`))).slice(0, ID_BYTES);
 	const key = await crypto.subtle.importKey(
 		"raw",
-		encoder.encode(token),
+		encoder.encode(code),
 		{ name: "HMAC", hash: "SHA-256" },
 		false,
 		["sign"],
 	);
-	return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode("kiteline-device-v1")));
+	const secret = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode("kiteline-pair-v2")));
+	return { id, secret };
 }
 
-/** The device secret as a key for the handshake. A phone keeps it non-extractable: usable, never readable. */
-export function importSecret(secret: Bytes, extractable = false) {
-	return crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, extractable, ["sign"]);
+/** A secret as a key for the handshake. A phone keeps it non-extractable: usable, never readable. */
+export function importSecret(secret: Bytes, extractable = false): Promise<SecretKey> {
+	// Typed as SecretKey: browser and Node typings each have their own CryptoKey.
+	return crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, extractable, [
+		"sign",
+	]) as Promise<SecretKey>;
+}
+
+function nameBytes(identity: Identity): Bytes {
+	if (!/^[\w-]{22}$/.test(identity.id)) throw new HandshakeError("A key's name is 22 characters.");
+	return concat(Uint8Array.of(KIND_BYTE[identity.kind]), encoder.encode(identity.id));
 }
 
 async function ephemeral() {
@@ -148,15 +192,20 @@ export class Cipher {
 	}
 }
 
-/** The phone's side. `send` puts a frame on the wire; `next` waits for the next one from the computer. */
+/**
+ * The phone's side. `identity` names the key it holds; `send` puts a frame on the wire; `next` waits
+ * for the next one from the computer.
+ */
 export async function initiate(
+	identity: Identity,
 	secret: SecretKey,
 	send: (frame: Bytes) => void,
 	next: () => Promise<Bytes>,
 ): Promise<Cipher> {
+	const name = nameBytes(identity);
 	const mine = await ephemeral();
 	const clientNonce = random(NONCE_BYTES);
-	send(concat(Uint8Array.of(Frame.Hello, TUNNEL_VERSION), mine.publicKey, clientNonce));
+	send(concat(Uint8Array.of(Frame.Hello, TUNNEL_VERSION), name, mine.publicKey, clientNonce));
 
 	const welcome = await next();
 	if (welcome[0] !== Frame.Welcome || welcome.length !== 1 + PUBLIC_KEY_BYTES + NONCE_BYTES + CONFIRM_BYTES) {
@@ -166,7 +215,7 @@ export async function initiate(
 	const hostNonce = welcome.slice(1 + PUBLIC_KEY_BYTES, 1 + PUBLIC_KEY_BYTES + NONCE_BYTES);
 	const hostProof = welcome.slice(1 + PUBLIC_KEY_BYTES + NONCE_BYTES);
 
-	const transcript = await sha256(concat(LABEL, mine.publicKey, clientNonce, hostPublic, hostNonce));
+	const transcript = await sha256(concat(LABEL, name, mine.publicKey, clientNonce, hostPublic, hostNonce));
 	const keys = await schedule(secret, await agree(mine.privateKey, hostPublic), transcript);
 	if (!(await crypto.subtle.verify("HMAC", keys.hostConfirm, hostProof, transcript))) {
 		throw new HandshakeError("The computer doesn't hold this phone's pairing.");
@@ -176,23 +225,33 @@ export async function initiate(
 	return new Cipher(keys.c2s, keys.s2c);
 }
 
-/** The computer's side: answers a phone's hello, and accepts it only once it proves the pairing. */
+/**
+ * The computer's side: looks up the key the phone names, answers its hello, and accepts it only once
+ * it proves it holds that key. Says which key it was, so the computer knows who's at the other end.
+ */
 export async function respond(
-	secret: SecretKey,
+	keyFor: KeyLookup,
 	hello: Bytes,
 	send: (frame: Bytes) => void,
 	next: () => Promise<Bytes>,
-): Promise<Cipher> {
-	if (hello[0] !== Frame.Hello || hello.length !== 2 + PUBLIC_KEY_BYTES + NONCE_BYTES) {
+): Promise<{ cipher: Cipher; identity: Identity }> {
+	if (hello[0] !== Frame.Hello) throw new HandshakeError("That wasn't a handshake.");
+	if (hello[1] !== TUNNEL_VERSION) throw new HandshakeError(`Unsupported tunnel version ${hello[1]}.`);
+	const kind = KINDS[hello[2] ?? 0];
+	const id = decoder.decode(hello.subarray(3, 3 + ID_BYTES));
+	if (hello.length !== HELLO_BYTES || !kind || !/^[\w-]{22}$/.test(id)) {
 		throw new HandshakeError("That wasn't a handshake.");
 	}
-	if (hello[1] !== TUNNEL_VERSION) throw new HandshakeError(`Unsupported tunnel version ${hello[1]}.`);
-	const clientPublic = hello.slice(2, 2 + PUBLIC_KEY_BYTES);
-	const clientNonce = hello.slice(2 + PUBLIC_KEY_BYTES);
+	const identity: Identity = { kind, id };
+	const secret = await keyFor(identity);
+	if (!secret) throw new UnknownKey(identity);
+	const name = hello.slice(2, 3 + ID_BYTES);
+	const clientPublic = hello.slice(3 + ID_BYTES, 3 + ID_BYTES + PUBLIC_KEY_BYTES);
+	const clientNonce = hello.slice(3 + ID_BYTES + PUBLIC_KEY_BYTES);
 
 	const mine = await ephemeral();
 	const hostNonce = random(NONCE_BYTES);
-	const transcript = await sha256(concat(LABEL, clientPublic, clientNonce, mine.publicKey, hostNonce));
+	const transcript = await sha256(concat(LABEL, name, clientPublic, clientNonce, mine.publicKey, hostNonce));
 	const keys = await schedule(secret, await agree(mine.privateKey, clientPublic), transcript);
 	const proof = new Uint8Array(await crypto.subtle.sign("HMAC", keys.hostConfirm, transcript));
 	send(concat(Uint8Array.of(Frame.Welcome), mine.publicKey, hostNonce, proof));
@@ -204,5 +263,5 @@ export async function respond(
 	if (!(await crypto.subtle.verify("HMAC", keys.clientConfirm, confirm.slice(1), transcript))) {
 		throw new HandshakeError("This phone isn't paired with this computer.");
 	}
-	return new Cipher(keys.s2c, keys.c2s);
+	return { cipher: new Cipher(keys.s2c, keys.c2s), identity };
 }

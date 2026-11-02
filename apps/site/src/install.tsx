@@ -73,7 +73,7 @@ function Terminal() {
 						{"  "}
 						<span className="t-accent">◆</span>
 						{"  "}
-						<b>Kiteline</b> <span className="t-dim">v0.2.0</span>
+						<b>Kiteline</b> <span className="t-dim">v0.3.0</span>
 					</div>
 					<div className="term__gap" />
 					<div className="term__line out" style={at(1.05)}>
@@ -87,7 +87,7 @@ function Terminal() {
 					<div className="term__gap" />
 					<div className="term__line out" style={at(1.22)}>
 						{"  "}
-						<b>Pair your phone:</b> scan this code, or open the link on it.
+						<b>Pair a phone:</b> scan this code, or open the link on it.
 					</div>
 					<div className="term__gap" />
 					<svg
@@ -103,7 +103,7 @@ function Terminal() {
 					<div className="term__gap" />
 					<div className="term__line out" style={at(1.55)}>
 						{"  "}
-						<span className="t-accent">https://relay.kiteline.seefun.dev/#host=…&amp;pair=…</span>
+						<span className="t-accent">https://relay.kiteline.seefun.dev/#host=…&amp;code=…</span>
 					</div>
 				</div>
 			</div>
@@ -131,10 +131,10 @@ export function Install() {
 					<li className="setup-step">
 						<span className="setup-step__n">2</span>
 						<div className="setup-step__body">
-							<h3>Scan the code with your phone</h3>
+							<h3>Scan the code, then allow your phone</h3>
 							<p>
-								Kiteline opens already paired, and stays paired. To show the code again later, run{" "}
-								<code>npx kiteline pair</code>.
+								Check that your phone and the terminal show the same six digits, and type y. To pair another
+								device later, run <code>npx kiteline pair</code>.
 							</p>
 						</div>
 					</li>

@@ -12,10 +12,9 @@ import {
 import { homedir, userInfo } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 
-import { kitelineHome } from "./auth";
+import { kitelineHome, localAddress } from "./auth";
 import { accent, bold, dim } from "./banner";
 import { readSettings, SettingsError } from "./config";
-import { showPairing } from "./show-pairing";
 
 /**
  * `kiteline service`: Kiteline as a systemd user service, written for this computer, so it starts with
@@ -25,7 +24,7 @@ import { showPairing } from "./show-pairing";
 // Another name lets a second Kiteline run beside the first, on its own port.
 const NAME = process.env.KITELINE_SERVICE_NAME?.trim() || "kiteline";
 const MARK = "# Written by `kiteline service install`. Run it again to change these settings.";
-/** The settings worth keeping in the service, when they're set now. Never the pairing token. */
+/** The settings worth keeping in the service, when they're set now. Never a key. */
 const KEPT = [
 	"PORT",
 	"HOST",
@@ -117,12 +116,6 @@ WantedBy=default.target
 `;
 }
 
-/** Where the service would answer, to check it came up (or that something else holds the port). */
-function localAddress(port: number, host: string) {
-	const loopback = ["0.0.0.0", "::", "127.0.0.1", "localhost", ""].includes(host);
-	return `http://${loopback ? "127.0.0.1" : host.includes(":") ? `[${host}]` : host}:${port}`;
-}
-
 async function answers(url: string) {
 	return fetch(`${url}/auth/status`, { signal: AbortSignal.timeout(1500) })
 		.then((r) => r.ok)
@@ -153,11 +146,6 @@ async function install({ force }: { force: boolean }) {
 		if (!(error instanceof SettingsError)) throw error;
 		fail(error.message);
 	}
-	if (process.env.KITELINE_TOKEN?.trim()) {
-		say(
-			dim("KITELINE_TOKEN stays out of the service file, where it could be read; the service makes its own."),
-		);
-	}
 
 	const file = unitFile();
 	const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
@@ -182,8 +170,9 @@ async function install({ force }: { force: boolean }) {
 	if (existing !== null && !existing.includes(MARK)) copyFileSync(file, `${file}.bak`);
 	writeFileSync(file, unitText(process.execPath, script));
 
-	const pairingFile = join(kitelineHome(settings.home), "pairing.json");
-	const before = existsSync(pairingFile) ? statSync(pairingFile).mtimeMs : 0;
+	// The service says where it answers when it starts; a fresh note means this start's is up.
+	const serverFile = join(kitelineHome(settings.home), "server.json");
+	const before = existsSync(serverFile) ? statSync(serverFile).mtimeMs : 0;
 	for (const step of [["daemon-reload"], ["enable", NAME], ["restart", NAME]]) {
 		const result = systemctl(...step);
 		if (result.status !== 0) fail(`systemctl --user ${step.join(" ")} failed:`, result.stderr.trim());
@@ -201,11 +190,10 @@ async function install({ force }: { force: boolean }) {
 			lingerNote = `To start it at boot, before anyone logs in, run once: ${accent(`sudo loginctl enable-linger ${user}`)}`;
 	}
 
-	// Wait for it to answer and to save this start's pairing code.
 	let up = false;
 	for (let i = 0; i < 40 && !up; i++) {
 		await sleep(250);
-		const fresh = existsSync(pairingFile) && statSync(pairingFile).mtimeMs > before;
+		const fresh = existsSync(serverFile) && statSync(serverFile).mtimeMs > before;
 		up = fresh && (await answers(url));
 	}
 	if (!up) {
@@ -216,16 +204,25 @@ async function install({ force }: { force: boolean }) {
 		);
 	}
 
-	await showPairing();
 	say(
 		`${bold("Kiteline runs in the background now.")} It starts with your computer and restarts if it stops.`,
 		"",
 		row("See what it's doing", `journalctl --user -u ${NAME} -f`),
-		row("Show this code again", "kiteline pair"),
+		row("Pair a phone", "kiteline pair"),
+		row("See paired devices", "kiteline devices"),
 		row("Change its settings", "kiteline service install, with the new options"),
 		row("Stop running it", "kiteline service uninstall"),
 		...(lingerNote ? ["", lingerNote] : []),
 	);
+
+	// Nothing paired yet and someone at the keyboard: pair the first phone now.
+	const { connectToKiteline } = await import("./control");
+	const { client } = await connectToKiteline();
+	const { devices } = await client.devices.list();
+	if (!devices.length && process.stdin.isTTY && process.stdout.isTTY) {
+		const { pairCommand } = await import("./pair-command");
+		await pairCommand();
+	}
 }
 
 function uninstall({ force }: { force: boolean }) {
@@ -269,7 +266,8 @@ function status() {
 		dim(file),
 		"",
 		row("See what it's doing", `journalctl --user -u ${NAME} -f`),
-		row("Show the pairing code", "kiteline pair"),
+		row("Pair a phone", "kiteline pair"),
+		row("See paired devices", "kiteline devices"),
 		row("Stop running it", "kiteline service uninstall"),
 	);
 }

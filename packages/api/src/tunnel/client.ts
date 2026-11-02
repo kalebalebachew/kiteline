@@ -1,4 +1,4 @@
-import { type Bytes, type Cipher, HandshakeError, initiate, type SecretKey } from "./crypto";
+import { type Bytes, type Cipher, HandshakeError, type Identity, initiate, type SecretKey } from "./crypto";
 import {
 	CHUNK,
 	json,
@@ -13,7 +13,7 @@ import {
 import { PAIRED, RelayClose } from "./relay-protocol";
 import { FrameSocket, opened, SocketClosed, SocketTimeout } from "./socket";
 
-export type TunnelProblem = "offline" | "unpaired" | "silent" | "lost";
+export type TunnelProblem = "offline" | "unpaired" | "expired" | "silent" | "lost";
 
 /** Why the tunnel isn't there, in words a person can act on. */
 export class TunnelError extends Error {
@@ -27,7 +27,8 @@ export class TunnelError extends Error {
 
 const MESSAGES: Record<TunnelProblem, string> = {
 	offline: "Your computer isn't connected to the relay. Check that Kiteline is running there with --relay.",
-	unpaired: "This phone isn't paired with that computer any more. Scan its pairing code again.",
+	unpaired: "This phone isn't paired with that computer any more. Pair it again: run kiteline pair there.",
+	expired: "That pairing code has expired or was already used. Run kiteline pair for a new one.",
 	silent: "Your computer didn't answer. Check that Kiteline is still running there.",
 	lost: "Lost the connection to your computer.",
 };
@@ -37,7 +38,7 @@ function problemFor(error: unknown): TunnelProblem {
 	if (error instanceof HandshakeError) return "unpaired";
 	if (error instanceof SocketClosed) {
 		if (error.code === RelayClose.HostOffline) return "offline";
-		if (error.code === RelayClose.NotPaired) return "unpaired";
+		if (error.code === RelayClose.NotPaired) return error.reason === "code expired" ? "expired" : "unpaired";
 		if (error.code === RelayClose.HostSilent) return "silent";
 	}
 	if (error instanceof SocketTimeout) return "silent";
@@ -82,8 +83,13 @@ export class Tunnel {
 		void this.receive();
 	}
 
-	/** Reaches the computer through the relay and proves both ends hold the pairing. */
-	static async connect(url: string, secret: SecretKey, timeoutMs = 20_000): Promise<Tunnel> {
+	/** Reaches the computer through the relay and proves both ends hold the key `identity` names. */
+	static async connect(
+		url: string,
+		identity: Identity,
+		secret: SecretKey,
+		timeoutMs = 20_000,
+	): Promise<Tunnel> {
 		const ws = new WebSocket(url);
 		const socket = new FrameSocket(ws);
 		try {
@@ -91,6 +97,7 @@ export class Tunnel {
 			const note = await socket.nextText(timeoutMs);
 			if (note !== PAIRED) throw new TunnelError("lost", MESSAGES.lost);
 			const cipher = await initiate(
+				identity,
 				secret,
 				(frame) => socket.send(frame),
 				() => socket.next(timeoutMs),

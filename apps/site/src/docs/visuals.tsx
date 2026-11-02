@@ -82,7 +82,7 @@ export function BannerShot() {
 					{"  "}
 					<span className="t-accent">◆</span>
 					{"  "}
-					<b>Kiteline</b> <span className="t-dim">v0.2.0</span>
+					<b>Kiteline</b> <span className="t-dim">v0.3.0</span>
 				</div>
 				<div className="banner-shot__gap" />
 				<div>
@@ -96,7 +96,7 @@ export function BannerShot() {
 				<div className="banner-shot__gap" />
 				<div>
 					{"  "}
-					<b>Pair your phone:</b> scan this code, or open the link on it.
+					<b>Pair a phone:</b> scan this code, or open the link on it.
 				</div>
 				<svg
 					className="banner-shot__qr"
@@ -109,11 +109,32 @@ export function BannerShot() {
 				</svg>
 				<div>
 					{"  "}
-					<span className="t-accent">https://relay.kiteline.seefun.dev/#host=…&amp;pair=…</span>
+					<span className="t-accent">https://relay.kiteline.seefun.dev/#host=…&amp;code=…</span>
 				</div>
 				<div>
 					{"  "}
-					<span className="t-dim">Keep this link private. Run with --new-token to unpair every device.</span>
+					<span className="t-dim">
+						Works once, for the next 10 minutes. You'll be asked to allow the phone.
+					</span>
+				</div>
+				<div className="banner-shot__gap" />
+				<div>
+					{"  "}
+					<span className="t-accent">◆</span>
+					{"  "}
+					<b>iPhone · Safari</b> wants to pair, through the relay.
+				</div>
+				<div>
+					{"     "}Allow it only if it's yours and its screen shows <b>482 913</b>.
+				</div>
+				<div>
+					{"     "}Allow it? <span className="t-dim">y or n</span> y
+				</div>
+				<div className="banner-shot__gap" />
+				<div>
+					{"  "}
+					<span className="t-accent">◆</span>
+					{"  "}Paired <b>iPhone · Safari</b>.
 				</div>
 			</div>
 		</div>

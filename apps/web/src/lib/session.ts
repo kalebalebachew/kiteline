@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { client, errorMessage, isUnauthorized, orpc } from "./orpc";
+import { client, errorMessage, isUnauthorized, lostPairing, orpc } from "./orpc";
 
 type State = {
 	run: RunSnapshot | null;
@@ -116,7 +116,7 @@ export function useRunStream(sessionId: string | null) {
 						continue;
 					}
 					if (isUnauthorized(error)) {
-						queryClient.setQueryData(["auth"], { authed: false });
+						lostPairing();
 						break;
 					}
 				} finally {
@@ -153,7 +153,7 @@ export function useRunStream(sessionId: string | null) {
 			window.removeEventListener("online", onOnline);
 			setConnected(false);
 		};
-	}, [sessionId, queryClient]);
+	}, [sessionId]);
 
 	// A run that just ended or restarted has written to the transcript; refresh it.
 	const status = state.run?.status;

@@ -1,17 +1,14 @@
 import type { RunManager } from "./agent/manager";
-
-export type Pairing = {
-	/** The link that pairs a device, with the token in its fragment. */
-	url: string;
-	/** Every address this server answers on, for display. */
-	urls: string[];
-	svg: string;
-};
+import type { Actor, Devices } from "./devices";
 
 export type Context = {
 	authed: boolean;
+	/** Who's asking: a paired device, or the computer's own `kiteline` commands, as "terminal". */
+	caller: Actor | null;
 	manager: RunManager;
-	pairing: Pairing;
+	devices: Devices;
+	/** The link a one-time pairing code goes in, with its QR code. */
+	pairingLink: (code: string) => { url: string; svg: string };
 	allowBypass: boolean;
 	version: string;
 };

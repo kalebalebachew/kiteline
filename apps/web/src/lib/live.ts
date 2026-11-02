@@ -2,7 +2,7 @@ import type { RunSummary } from "@kiteline/api/agent/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { client, isUnauthorized, orpc } from "./orpc";
+import { client, isUnauthorized, lostPairing, orpc } from "./orpc";
 
 /** Every live session on the computer, kept current over one event stream. */
 export function useLiveRuns() {
@@ -35,7 +35,7 @@ export function useLiveRuns() {
 				} catch (error) {
 					if (signal.aborted) break;
 					if (isUnauthorized(error)) {
-						queryClient.setQueryData(["auth"], { authed: false });
+						lostPairing();
 						break;
 					}
 				}

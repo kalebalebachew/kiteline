@@ -7,12 +7,14 @@
 		"check-types": "tsc -b ../../packages/api && tsc --noEmit",
 		"dev": "tsx watch src/index.ts --dev",
 		"start": "node dist/index.mjs",
-		"pair": "node dist/pair.mjs"
+		"pair": "node dist/pair.mjs",
+		"devices": "node dist/cli.mjs devices"
 	},
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "0.3.316",
 		"@kiteline/api": "workspace:*",
 		"@hono/node-server": "^2.1.1",
+		"@orpc/client": "catalog:",
 		"@orpc/server": "catalog:",
 		"hono": "^4.13.7",
 		"uqr": "^0.1.3",
@@ -25,5 +27,5 @@
 		"tsx": "^4.23.13",
 		"typescript": "catalog:"
 	},
-	"version": "0.2.0"
+	"version": "0.3.0"
 }

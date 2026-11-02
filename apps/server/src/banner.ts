@@ -1,7 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
-import { join } from "node:path";
-import type { Pairing } from "@kiteline/api/context";
+
 import { renderSVG, renderUnicodeCompact } from "uqr";
 
 import { command, otherPortHint } from "./config";
@@ -19,27 +17,30 @@ export function reachableHosts(): string[] {
 	return hosts.sort((a, b) => rank(a) - rank(b));
 }
 
+type Where = { publicUrl?: string; loopbackOnly: boolean; relay?: { url: string; hostId: string } };
+
+/** Every address a phone might reach this computer at: the relay, the public URL, the LAN, this machine. */
+export function addressesFor(port: number, where: Where) {
+	const publicUrl = where.publicUrl?.replace(/\/+$/, "");
+	const lan = where.loopbackOnly ? [] : reachableHosts().map((host) => `http://${host}:${port}`);
+	const relay = where.relay?.url.replace(/\/+$/, "");
+	return [...(relay ? [relay] : []), ...(publicUrl ? [publicUrl] : []), ...lan, `http://localhost:${port}`];
+}
+
 /**
- * The pairing link points at the public URL when one is set (say, the HTTPS
- * address from `tailscale serve`), otherwise at the first LAN address.
+ * Where a one-time code goes: through the relay, the link also says which computer, and works on any
+ * network; otherwise it points at the public URL when one is set (say, the HTTPS address from
+ * `tailscale serve`), or else the first LAN address. The code rides after #, which browsers never send.
  */
-export function buildPairing(
-	port: number,
-	token: string,
-	options: { publicUrl?: string; loopbackOnly: boolean; relay?: { url: string; hostId: string } },
-): Pairing {
-	const publicUrl = options.publicUrl?.replace(/\/+$/, "");
-	const lan = options.loopbackOnly ? [] : reachableHosts().map((host) => `http://${host}:${port}`);
-	const relay = options.relay?.url.replace(/\/+$/, "");
-	const urls = [
-		...(relay ? [relay] : []),
-		...(publicUrl ? [publicUrl] : []),
-		...lan,
-		`http://localhost:${port}`,
-	];
-	// Through the relay, the link says which computer as well as the code; it works on any network.
-	const url = relay ? `${relay}/#host=${options.relay?.hostId}&pair=${token}` : `${urls[0]}/#pair=${token}`;
-	return { url, urls, svg: renderSVG(url, { border: 1 }) };
+export function pairingLinks(port: number, where: Where) {
+	const urls = addressesFor(port, where);
+	const relay = where.relay;
+	return (code: string) => {
+		const url = relay
+			? `${relay.url.replace(/\/+$/, "")}/#host=${relay.hostId}&code=${code}`
+			: `${urls[0]}/#code=${code}`;
+		return { url, svg: renderSVG(url, { border: 1 }) };
+	};
 }
 
 // Color only for a person at a terminal: a service's log or a pipe gets plain text.
@@ -49,52 +50,47 @@ export const dim = paint("2", "22");
 export const bold = paint("1", "22");
 export const accent = paint("38;5;117", "39");
 
+/** Six digits as people read them off a screen: 482 913. */
+export const spaced = (match: string) => `${match.slice(0, 3)} ${match.slice(3)}`;
+
+/** Who's running, and where: never a pairing link, which a service's log would keep. */
 export function printBanner(
-	pairing: Pairing,
+	urls: string[],
 	options: { version: string; dev: boolean; relay?: string | null },
 ) {
 	const lines = [
 		"",
 		`  ${accent("◆")}  ${bold("Kiteline")} ${dim(`v${options.version}`)}${options.dev ? dim("  (dev, web on :4546)") : ""}`,
 		"",
-		...pairing.urls.map((url, i) => {
-			const label =
-				i === pairing.urls.length - 1 ? "Local   " : url === options.relay ? "Anywhere" : "Network ";
+		...urls.map((url, i) => {
+			const label = i === urls.length - 1 ? "Local   " : url === options.relay ? "Anywhere" : "Network ";
 			return `  ${dim(label)} ${url}`;
 		}),
 		...(options.relay
 			? ["", `  ${dim("Through the relay, sealed end to end: it passes your sessions on unread.")}`]
 			: []),
 		"",
-		`  ${bold("Pair your phone:")} scan this code, or open the link on it.`,
-		"",
-		...renderUnicodeCompact(pairing.url, { border: 1 })
-			.split("\n")
-			.map((row) => `  ${row}`),
-		"",
-		`  ${accent(pairing.url)}`,
-		`  ${dim("Keep this link private. Start with --new-token to unpair every device.")}`,
-		"",
 	];
 	console.log(lines.join("\n"));
 }
 
-export type SavedPairing = { version: string; url: string; urls: string[]; startedAt: string };
-
-/** Lets `pnpm pair` show the code later without starting a second server. */
-export function savePairing(home: string, pairing: Pairing, version: string) {
-	const saved: SavedPairing = {
-		version,
-		url: pairing.url,
-		urls: pairing.urls,
-		startedAt: new Date().toISOString(),
-	};
-	try {
-		mkdirSync(home, { recursive: true, mode: 0o700 });
-		writeFileSync(join(home, "pairing.json"), `${JSON.stringify(saved, null, 2)}\n`, { mode: 0o600 });
-	} catch {
-		// Only `pnpm pair` needs this file; the server runs fine without it.
-	}
+/** A one-time code to scan, for a person at a terminal. */
+export function printPairingCode(link: { url: string; expiresAt: number }, options: { more?: string } = {}) {
+	const minutes = Math.max(1, Math.round((link.expiresAt - Date.now()) / 60_000));
+	const lines = [
+		"",
+		`  ${bold("Pair a phone:")} scan this code, or open the link on it.`,
+		"",
+		...renderUnicodeCompact(link.url, { border: 1 })
+			.split("\n")
+			.map((row) => `  ${row}`),
+		"",
+		`  ${accent(link.url)}`,
+		`  ${dim(`Works once, for the next ${minutes} minutes. You'll be asked to allow the phone.`)}`,
+		...(options.more ? [`  ${dim(options.more)}`] : []),
+		"",
+	];
+	console.log(lines.join("\n"));
 }
 
 export function printAlreadyRunning(port: number) {
@@ -104,7 +100,7 @@ export function printAlreadyRunning(port: number) {
 			`  ${accent("◆")}  ${bold("Kiteline didn't start:")} port ${port} is already in use.`,
 			"",
 			"  If Kiteline is already running, for example as the background service,",
-			"  there's nothing to start. Show the pairing code with:",
+			"  there's nothing to start. Pair a phone with it:",
 			"",
 			`    ${accent(command("pair"))}`,
 			"",

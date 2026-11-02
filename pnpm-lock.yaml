@@ -255,9 +255,12 @@ importers:
       '@kiteline/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@orpc/server':
+      '@orpc/client':
         specifier: 'catalog:'
         version: 1.16.1(@opentelemetry/api@1.10.0)
+      '@orpc/server':
+        specifier: 'catalog:'
+        version: 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       hono:
         specifier: ^4.13.7
         version: 4.13.14
@@ -340,7 +343,7 @@ importers:
         version: 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/server':
         specifier: 'catalog:'
-        version: 1.16.1(@opentelemetry/api@1.10.0)
+        version: 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       '@orpc/tanstack-query':
         specifier: ^1.15.6
         version: 1.16.1(@opentelemetry/api@1.10.0)(@orpc/client@1.16.1(@opentelemetry/api@1.10.0))(@tanstack/query-core@5.105.0)
@@ -434,13 +437,13 @@ importers:
         version: 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/openapi':
         specifier: 'catalog:'
-        version: 1.16.1(@opentelemetry/api@1.10.0)
+        version: 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       '@orpc/server':
         specifier: 'catalog:'
-        version: 1.16.1(@opentelemetry/api@1.10.0)
+        version: 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       '@orpc/zod':
         specifier: 'catalog:'
-        version: 1.16.1(@opentelemetry/api@1.10.0)(@orpc/contract@1.16.1(@opentelemetry/api@1.10.0))(@orpc/server@1.16.1(@opentelemetry/api@1.10.0))(zod@4.6.7)
+        version: 1.16.1(@opentelemetry/api@1.10.0)(@orpc/contract@1.16.1(@opentelemetry/api@1.10.0))(@orpc/server@1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1))(ws@8.22.1)(zod@4.6.7)
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -6082,12 +6085,12 @@ snapshots:
 
   '@orpc/interop@1.16.1': {}
 
-  '@orpc/json-schema@1.16.1(@opentelemetry/api@1.10.0)':
+  '@orpc/json-schema@1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)':
     dependencies:
       '@orpc/contract': 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/interop': 1.16.1
-      '@orpc/openapi': 1.16.1(@opentelemetry/api@1.10.0)
-      '@orpc/server': 1.16.1(@opentelemetry/api@1.10.0)
+      '@orpc/openapi': 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
+      '@orpc/server': 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       '@orpc/shared': 1.16.1(@opentelemetry/api@1.10.0)
       json-schema-typed: 8.0.2
     transitivePeerDependencies:
@@ -6105,13 +6108,13 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/openapi@1.16.1(@opentelemetry/api@1.10.0)':
+  '@orpc/openapi@1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)':
     dependencies:
       '@orpc/client': 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/contract': 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/interop': 1.16.1
       '@orpc/openapi-client': 1.16.1(@opentelemetry/api@1.10.0)
-      '@orpc/server': 1.16.1(@opentelemetry/api@1.10.0)
+      '@orpc/server': 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       '@orpc/shared': 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/standard-server': 1.16.1(@opentelemetry/api@1.10.0)
       json-schema-typed: 8.0.2
@@ -6122,7 +6125,7 @@ snapshots:
       - fastify
       - ws
 
-  '@orpc/server@1.16.1(@opentelemetry/api@1.10.0)':
+  '@orpc/server@1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)':
     dependencies:
       '@orpc/client': 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/contract': 1.16.1(@opentelemetry/api@1.10.0)
@@ -6135,6 +6138,8 @@ snapshots:
       '@orpc/standard-server-node': 1.16.1(@opentelemetry/api@1.10.0)
       '@orpc/standard-server-peer': 1.16.1(@opentelemetry/api@1.10.0)
       cookie: 1.1.1
+    optionalDependencies:
+      ws: 8.22.1
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - fastify
@@ -6199,12 +6204,12 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/zod@1.16.1(@opentelemetry/api@1.10.0)(@orpc/contract@1.16.1(@opentelemetry/api@1.10.0))(@orpc/server@1.16.1(@opentelemetry/api@1.10.0))(zod@4.6.7)':
+  '@orpc/zod@1.16.1(@opentelemetry/api@1.10.0)(@orpc/contract@1.16.1(@opentelemetry/api@1.10.0))(@orpc/server@1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1))(ws@8.22.1)(zod@4.6.7)':
     dependencies:
       '@orpc/contract': 1.16.1(@opentelemetry/api@1.10.0)
-      '@orpc/json-schema': 1.16.1(@opentelemetry/api@1.10.0)
-      '@orpc/openapi': 1.16.1(@opentelemetry/api@1.10.0)
-      '@orpc/server': 1.16.1(@opentelemetry/api@1.10.0)
+      '@orpc/json-schema': 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
+      '@orpc/openapi': 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
+      '@orpc/server': 1.16.1(@opentelemetry/api@1.10.0)(ws@8.22.1)
       '@orpc/shared': 1.16.1(@opentelemetry/api@1.10.0)
       escape-string-regexp: 5.0.0
       wildcard-match: 5.1.6

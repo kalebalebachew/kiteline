@@ -2,12 +2,13 @@ import { Toaster } from "@kiteline/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
+import { DeviceWatch } from "@/components/device-watch";
 import { PairScreen } from "@/components/pair-screen";
 import { Offline, Splash } from "@/components/splash";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
-import { initialPairToken, pair, takePairToken, useAuth } from "@/lib/auth";
+import { initialPairLink, takePairLink, useAuth } from "@/lib/auth";
 import { setHome } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
 import { TunnelError } from "@/lib/relay";
@@ -43,52 +44,47 @@ function RootComponent() {
 	);
 }
 
-let pendingToken = initialPairToken;
-
 function AuthGate({ children }: { children: ReactNode }) {
 	const queryClient = useQueryClient();
-	const [pairing, setPairing] = useState(!!pendingToken);
-	const [pairError, setPairError] = useState<string | null>(null);
+	// A pairing link this page was opened with, or that came in later.
+	const [link, setLink] = useState(initialPairLink);
 	const auth = useAuth();
 
-	// A pairing link opened in a tab that already shows Kiteline only changes the #: take it from there too.
+	// A link opened in a tab that already shows Kiteline only changes the #: take it from there too.
 	useEffect(() => {
 		const onHash = () => {
-			const token = takePairToken();
-			if (!token) return;
-			setPairing(true);
-			setPairError(null);
-			void pair(token)
-				.then((result) => {
-					if (result.ok) void queryClient.invalidateQueries({ queryKey: ["auth"] });
-					else setPairError(result.error);
-				})
-				.catch(() => setPairError("Couldn't reach your computer to pair. Check that Kiteline is running."))
-				.finally(() => setPairing(false));
+			const next = takePairLink();
+			if (next) setLink(next);
 		};
 		window.addEventListener("hashchange", onHash);
 		return () => window.removeEventListener("hashchange", onHash);
+	}, []);
+
+	const onPaired = useCallback(() => {
+		setLink(null);
+		queryClient.removeQueries({ queryKey: ["devices"] });
+		void queryClient.invalidateQueries({ queryKey: ["auth"] });
 	}, [queryClient]);
 
-	useEffect(() => {
-		const token = pendingToken;
-		if (!token) return;
-		pendingToken = null;
-		void pair(token)
-			.then((result) => {
-				if (result.ok) queryClient.setQueryData(["auth"], { authed: true });
-				else setPairError(result.error);
-			})
-			.catch(() => setPairError("Couldn't reach your computer to pair. Check that Kiteline is running."))
-			.finally(() => setPairing(false));
-	}, [queryClient]);
-
-	if (pairing || auth.isLoading) return <Splash />;
+	if (link)
+		return (
+			<PairScreen
+				link={link}
+				onPaired={onPaired}
+				onBack={auth.data?.authed ? () => setLink(null) : undefined}
+			/>
+		);
+	if (auth.isLoading) return <Splash />;
 	// Only when there's nothing to show: a failed background check mustn't wipe the page (and your draft).
 	if (auth.isError && !auth.data)
 		return <Offline onRetry={() => void auth.refetch()} reason={offlineReason(auth.error)} />;
-	if (!auth.data?.authed) return <PairScreen initialError={pairError} />;
-	return <HomeSync>{children}</HomeSync>;
+	if (!auth.data?.authed) return <PairScreen stale={auth.data?.stale} onPaired={onPaired} />;
+	return (
+		<HomeSync>
+			<DeviceWatch />
+			{children}
+		</HomeSync>
+	);
 }
 
 /** Through the relay, the tunnel says exactly what's wrong; otherwise, the usual suspects. */

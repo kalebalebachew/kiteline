@@ -1,11 +1,11 @@
 import { Tunnel, TunnelError, tunnelError } from "@kiteline/api/tunnel/client";
-import { deviceSecret, importSecret, type SecretKey } from "@kiteline/api/tunnel/crypto";
-import { RelayPath, relaySocketUrl } from "@kiteline/api/tunnel/relay-protocol";
+import { importSecret, pairingKey, type SecretKey } from "@kiteline/api/tunnel/crypto";
+import { fromBase64Url, RelayPath, relaySocketUrl } from "@kiteline/api/tunnel/relay-protocol";
 
 /**
  * Kiteline through the relay: the app comes from the relay, and everything it asks of the computer
- * goes through a sealed tunnel. The computer's key lives in IndexedDB as a key the browser can use
- * but can't hand back, so even a script that got into the page couldn't carry it off.
+ * goes through a sealed tunnel. This phone's key for the computer lives in IndexedDB as a key the
+ * browser can use but can't hand back, so even a script that got into the page couldn't carry it off.
  */
 
 /** The relay marks the page it serves; the computer's own copy has no mark. */
@@ -16,7 +16,8 @@ const DB = "kiteline-relay";
 const STORE = "computers";
 const CURRENT = "kiteline:relay:computer";
 
-type Computer = { id: string; key: SecretKey; pairedAt: number };
+/** A computer this phone is paired with: its address, this phone's id there, and this phone's key. */
+type Computer = { id: string; device?: string; key: SecretKey; pairedAt: number };
 
 function database() {
 	return new Promise<IDBDatabase>((resolve, reject) => {
@@ -44,18 +45,10 @@ function currentId() {
 	}
 }
 
-/** Reads `host=…&pair=…` from a pairing link, or the part of it after #. */
-export function parseRelayLink(value: string) {
-	const text = value.trim();
-	const host = /host=([\w-]{22})/.exec(text)?.[1];
-	const pair = /pair=([\w-]+)/.exec(text)?.[1];
-	return host && pair ? { host, pair } : null;
-}
-
-/** Keeps this computer's key on this phone. The pairing code itself is never stored. */
-export async function rememberComputer(host: string, pair: string) {
-	const key = await importSecret(await deviceSecret(pair));
-	await store("readwrite", (s) => s.put({ id: host, key, pairedAt: Date.now() }));
+/** Keeps this phone's key for a computer, once the computer allowed it. Only the browser can use it. */
+export async function rememberComputer(host: string, device: string, secret: string) {
+	const key = await importSecret(fromBase64Url(secret));
+	await store("readwrite", (s) => s.put({ id: host, device, key, pairedAt: Date.now() }));
 	try {
 		localStorage.setItem(CURRENT, host);
 	} catch {}
@@ -77,12 +70,27 @@ async function currentComputer() {
 	return ((await store("readonly", (s) => s.get(id)).catch(() => undefined)) as Computer | undefined) ?? null;
 }
 
-export async function hasComputer() {
-	return !!(await currentComputer());
+/** Paired, paired before pairing changed (whose key opens nothing now), or not at all. */
+export async function computerState(): Promise<"paired" | "outdated" | "none"> {
+	const computer = await currentComputer();
+	if (!computer) return "none";
+	return computer.device ? "paired" : "outdated";
 }
 
 let tunnel: Promise<Tunnel> | null = null;
 let live: Tunnel | null = null;
+
+/** Told when the computer stops knowing this phone, say because it was removed on another device. */
+const unpairedListeners = new Set<() => void>();
+export function onUnpaired(listener: () => void) {
+	unpairedListeners.add(listener);
+	return () => void unpairedListeners.delete(listener);
+}
+
+function unpaired() {
+	void forgetComputer();
+	for (const listener of unpairedListeners) listener();
+}
 
 function dropTunnel() {
 	live?.close();
@@ -94,14 +102,16 @@ function dropTunnel() {
 function getTunnel() {
 	tunnel ??= (async () => {
 		const computer = await currentComputer();
-		if (!computer) throw new TunnelError("unpaired", "This phone isn't paired with a computer yet.");
+		if (!computer?.device) throw new TunnelError("unpaired", "This phone isn't paired with a computer yet.");
 		const url = relaySocketUrl(window.location.origin, RelayPath.client + computer.id);
-		const opened = await Tunnel.connect(url, computer.key);
+		const opened = await Tunnel.connect(url, { kind: "device", id: computer.device }, computer.key);
 		live = opened;
-		opened.onClose(() => {
+		opened.onClose((error) => {
 			if (live !== opened) return;
 			live = null;
 			tunnel = null;
+			// Closed by the computer because this phone was removed: its key opens nothing now.
+			if (error.problem === "unpaired") unpaired();
 		});
 		return opened;
 	})();
@@ -121,9 +131,21 @@ export async function relayFetch(input: Request | string | URL, init?: RequestIn
 	try {
 		open = await getTunnel();
 	} catch (error) {
-		throw tunnelError(error);
+		const problem = tunnelError(error);
+		if (problem.problem === "unpaired" && currentId()) unpaired();
+		throw problem;
 	}
 	return open.fetch(input, init);
 }
 
-export { TunnelError };
+/**
+ * A tunnel opened with a one-time pairing code instead of a key: it reaches nothing but asking to
+ * pair and hearing the answer. The code works for the relay's handshake and is never sent.
+ */
+export async function pairingTunnel(host: string, code: string) {
+	const { id, secret } = await pairingKey(code);
+	const url = relaySocketUrl(window.location.origin, RelayPath.client + host);
+	return Tunnel.connect(url, { kind: "pairing", id }, await importSecret(secret));
+}
+
+export { type Tunnel, TunnelError, tunnelError };

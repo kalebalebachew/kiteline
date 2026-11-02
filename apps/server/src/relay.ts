@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { deviceSecret, importSecret } from "@kiteline/api/tunnel/crypto";
+import type { Identity, KeyLookup } from "@kiteline/api/tunnel/crypto";
 import { serveTunnel } from "@kiteline/api/tunnel/host";
 import {
 	fromBase64Url,
@@ -17,20 +17,23 @@ import {
 
 /**
  * This computer's side of the relay: one standing connection out to it, over which the relay asks
- * for a channel whenever a phone wants this computer. Each channel is a sealed tunnel; what comes
- * through it is answered by the same API the phone would reach directly, as a paired device.
+ * for a channel whenever a phone wants this computer. Each channel is a sealed tunnel, opened with the
+ * phone's own key or, while it asks to pair, the one-time code it scanned; what comes through is
+ * answered by the same API the phone would reach directly, as that device.
  */
 
 type Options = {
 	relay: string;
 	home: string;
-	token: string;
 	version: string;
-	handle: (request: Request) => Response | Promise<Response>;
+	keyFor: KeyLookup;
+	handle: (request: Request, identity: Identity) => Response | Promise<Response>;
+	/** A tunnel opened; what this returns runs when it closes. */
+	track?: (identity: Identity) => (() => void) | undefined;
 	log: (message: string) => void;
 };
 
-/** The relay's secret for this computer, kept beside the pairing token. Its hash is our address. */
+/** The relay's secret for this computer, kept beside its other keys. Its hash is our address. */
 function relaySecret(home: string) {
 	const file = join(home, "relay.json");
 	try {
@@ -47,13 +50,20 @@ function relaySecret(home: string) {
 	return secret;
 }
 
-/** Only the API and the pairing check go through: the phone's app comes from the relay itself. */
-function allowed(request: Request) {
+/**
+ * Only the API and the pairing check go through, and only what each key is for: a paired phone's
+ * reaches the API, a pairing code's reaches nothing but asking to pair. The app comes from the relay.
+ */
+function allowed(request: Request, identity: Identity) {
 	const { pathname } = new URL(request.url);
-	return (
-		(request.method === "POST" || request.method === "GET") &&
-		(pathname.startsWith("/rpc/") || pathname === "/auth/status")
-	);
+	const { method } = request;
+	if (pathname === "/auth/status") return method === "GET";
+	if (identity.kind === "pairing") {
+		if (pathname === "/auth/pair") return method === "POST";
+		return /^\/auth\/pair\/[\w-]+$/.test(pathname) && (method === "GET" || method === "DELETE");
+	}
+	if (pathname === "/auth/logout") return method === "POST";
+	return (method === "POST" || method === "GET") && pathname.startsWith("/rpc/");
 }
 
 export async function hostAddress(home: string) {
@@ -63,15 +73,38 @@ export async function hostAddress(home: string) {
 export async function startRelay(options: Options) {
 	const secret = relaySecret(options.home);
 	const hostId = await hostIdFor(fromBase64Url(secret));
-	const pairingKey = await importSecret(await deviceSecret(options.token));
+	const open = new Map<string, Set<(code: number, reason: string) => void>>();
+	const keyOf = (identity: Identity) => `${identity.kind}:${identity.id}`;
 
-	// A tunnel has already proved the pairing, so it speaks as a paired device.
-	const handle = async (request: Request) => {
-		if (!allowed(request)) return new Response("Not through the relay.", { status: 404 });
+	// The tunnel proved who's at the other end; nothing that came with the request can say otherwise.
+	const handle = async (request: Request, identity: Identity) => {
+		if (!allowed(request, identity)) return new Response("Not through the relay.", { status: 404 });
 		const headers = new Headers(request.headers);
 		headers.delete("cookie");
-		headers.set("authorization", `Bearer ${options.token}`);
-		return options.handle(new Request(request, { headers }));
+		headers.delete("authorization");
+		return options.handle(new Request(request, { headers }), identity);
+	};
+
+	type Closer = (code: number, reason: string) => void;
+	/** Keeps each open tunnel by its key, to end them when a device is removed. Returns the cleanup. */
+	const track = (identity: Identity, close: Closer) => {
+		const key = keyOf(identity);
+		const closers = open.get(key) ?? new Set<Closer>();
+		open.set(key, closers);
+		closers.add(close);
+		const release = options.track?.(identity);
+		// A pairing tunnel lasts only as long as the pairing it's for.
+		const limit =
+			identity.kind === "pairing"
+				? setTimeout(() => close(RelayClose.NotPaired, "code expired"), 30 * 60_000)
+				: null;
+		limit?.unref();
+		return () => {
+			if (limit) clearTimeout(limit);
+			closers.delete(close);
+			if (!closers.size) open.delete(key);
+			release?.();
+		};
 	};
 
 	let attempt = 0;
@@ -108,7 +141,13 @@ export async function startRelay(options: Options) {
 				connected = true;
 			} else if (message.t === "open" && /^[\w-]{22}$/.test(message.channel)) {
 				const data = new WebSocket(relaySocketUrl(options.relay, RelayPath.data + message.channel));
-				void serveTunnel(data, pairingKey, handle);
+				let done: (() => void) | undefined;
+				void serveTunnel(data, options.keyFor, handle, {
+					opened: (identity, close) => {
+						done = track(identity, close);
+					},
+					closed: () => done?.(),
+				});
 			}
 		});
 		ws.addEventListener("close", (event) => {
@@ -133,6 +172,10 @@ export async function startRelay(options: Options) {
 		hostId,
 		get connected() {
 			return connected;
+		},
+		/** Ends every tunnel open with this key, say because its device was just removed. */
+		disconnect(identity: Identity, reason = "not paired") {
+			for (const close of [...(open.get(keyOf(identity)) ?? [])]) close(RelayClose.NotPaired, reason);
 		},
 		stop() {
 			stopped = true;

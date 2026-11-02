@@ -30,7 +30,7 @@ You need Node.js 22.18 or newer, and Claude Code signed in on the computer.
 npx kiteline --relay
 ```
 
-Scan the QR code it prints with your phone's camera, and you're in, on any network. `--relay` connects through Kiteline's relay, sealed end to end: it passes your sessions on without being able to read them. Leave it out to keep Kiteline to your own Wi-Fi, or [use Tailscale](https://kiteline.seefun.dev/docs/#tailscale).
+Scan the QR code it prints with your phone's camera, check that the phone and the terminal show the same six digits, and allow it: you're in, on any network. `--relay` connects through Kiteline's relay, sealed end to end: it passes your sessions on without being able to read them. Leave it out to keep Kiteline to your own Wi-Fi, or [use Tailscale](https://kiteline.seefun.dev/docs/#tailscale).
 
 To keep it running in the background, starting with your computer (Linux):
 
@@ -48,7 +48,7 @@ Everything else is in the **[docs](https://kiteline.seefun.dev/docs/)**:
 
 ## Good to know
 
-- **Treat the pairing link like a password.** Anyone who opens it can drive Claude Code on your computer. Don't open Kiteline's port to the internet; use `--relay` or Tailscale to reach it from elsewhere.
+- **You approve every device.** A pairing code works once, for ten minutes, and only lets a device ask; it gets in once you allow it, like Bluetooth. Each device has its own key, and you can remove any one in Settings or with `kiteline devices`. Don't open Kiteline's port to the internet; use `--relay` or Tailscale to reach it from elsewhere.
 - **It uses Claude Code's own login,** your Claude plan or API key. Check that the way you use it fits your plan's terms.
 - **Tested on Linux so far.** Reports from real phones, macOS and Windows are very welcome.
 

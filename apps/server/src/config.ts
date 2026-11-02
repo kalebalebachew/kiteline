@@ -14,7 +14,6 @@ export type Settings = {
 	port: number;
 	host: string;
 	publicUrl: string | undefined;
-	token: string | undefined;
 	home: string | undefined;
 	claudePath: string | undefined;
 	allowBypass: boolean;
@@ -87,7 +86,6 @@ export function readSettings(): Settings {
 		port: whole("PORT", "The port", 4545, 1, 65_535),
 		host: text("HOST") ?? "0.0.0.0",
 		publicUrl: address("KITELINE_PUBLIC_URL", "The public address"),
-		token: text("KITELINE_TOKEN"),
 		home: text("KITELINE_HOME"),
 		claudePath: text("CLAUDE_PATH"),
 		allowBypass: yesNo("KITELINE_ALLOW_BYPASS", "Allowing Bypass mode", true),
@@ -102,8 +100,8 @@ let viaCli = false;
 export function startedFromCli() {
 	viaCli = true;
 }
-export function command(name: "start" | "pair") {
-	if (viaCli) return name === "start" ? "kiteline" : "kiteline pair";
+export function command(name: "start" | "pair" | "devices") {
+	if (viaCli) return name === "start" ? "kiteline" : `kiteline ${name}`;
 	return `pnpm ${name}`;
 }
 /** How to pick another port, in the same terms. */
