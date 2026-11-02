@@ -1,4 +1,4 @@
-import type { EffortChoice, PermissionModeId } from "@kiteline/api/agent/types";
+import type { AgentProvider, EffortChoice, PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
 import {
 	CaretLeftIcon,
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Composer, type ComposerSubmit } from "@/components/composer";
 import { EffortSheet } from "@/components/effort-sheet";
 import { FolderPicker } from "@/components/folder-picker";
+import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/menu";
 import { describeChoice, isEffortLevel } from "@/lib/effort";
 import { baseName, relativeTime, tildify } from "@/lib/format";
 import { modelLabel } from "@/lib/modes";
@@ -41,6 +42,7 @@ function NewSession() {
 		return [...new Set(ordered)].slice(0, 8).map((cwd) => ({ cwd, lastModified: latest.get(cwd) ?? null }));
 	}, [sessions.data, prefs.recentProjects]);
 
+	const [provider, setProvider] = useState<AgentProvider>("claude");
 	const [cwd, setCwd] = useState<string | null>(null);
 	const selected = cwd ?? projects[0]?.cwd ?? null;
 	const [picking, setPicking] = useState(false);
@@ -52,7 +54,7 @@ function NewSession() {
 	const [pendingEffort, setPendingEffort] = useState<EffortChoice | null>(null);
 	const startingEffort = useQuery(
 		orpc.runs.effortFor.queryOptions({
-			input: { cwd: selected, model },
+			input: { cwd: selected, model, provider },
 			enabled: !!selected,
 			staleTime: 30_000,
 		}),
@@ -64,8 +66,9 @@ function NewSession() {
 	const effortModel = modelLabel(startingEffort.data?.model ?? model);
 
 	const chooseEffort = async (choice: EffortChoice) => {
-		setPendingEffort(choice);
-		const { title, description } = describeChoice(choice, {
+		const selectedChoice = { ...choice, persist: provider === "claude" && choice.persist };
+		setPendingEffort(selectedChoice);
+		const { title, description } = describeChoice(selectedChoice, {
 			levels: effortLevels,
 			modelName: effortModel,
 			modelDefault: startingEffort.data?.modelDefault,
@@ -97,6 +100,7 @@ function NewSession() {
 			if (!selected) throw new Error("Pick a folder first.");
 			return client.runs.send({
 				cwd: selected,
+				provider,
 				text: value.text,
 				images: value.images.map(({ mediaType, data }) => ({ mediaType, data })),
 				permissionMode: mode,
@@ -137,6 +141,34 @@ function NewSession() {
 					Pick a project on {system.data?.hostname ?? "your computer"}, then say what you need.
 				</p>
 
+				<div className="mt-6">
+					<Menu>
+						<MenuTrigger className="bg-surface-2 text-foreground rounded-full px-4 py-2 text-[14px] font-medium">
+							Agent: {provider === "codex" ? "Codex" : "Claude Code"}
+						</MenuTrigger>
+						<MenuContent className="w-64">
+							<MenuRadioGroup
+								value={provider}
+								label="Agent"
+								onValueChange={(next: AgentProvider) => {
+									setProvider(next);
+									setModel(null);
+									setMode("default");
+									setPendingEffort(null);
+								}}
+							>
+								<MenuRadioItem value="claude" title="Claude Code" description="Uses your Claude Code login" />
+								<MenuRadioItem value="codex" title="Codex" description="Uses your local Codex CLI login" />
+							</MenuRadioGroup>
+						</MenuContent>
+					</Menu>
+				</div>
+
+				{provider === "codex" && startingEffort.error ? (
+					<p role="alert" className="text-destructive mt-3 text-[13px]">
+						{startingEffort.error.message}
+					</p>
+				) : null}
 				<h2 className="text-muted-foreground mt-7 mb-2 px-1 text-[13px] font-medium">Project</h2>
 				<div className="bg-surface shadow-card overflow-hidden rounded-2xl">
 					{rows.map((project, i) => {
@@ -197,6 +229,7 @@ function NewSession() {
 			<div className="from-background via-background to-background/0 sticky bottom-0 z-20 bg-gradient-to-t via-70% pt-8">
 				<div className="mx-auto w-full max-w-2xl px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
 					<Composer
+						provider={provider}
 						autoFocus
 						draftKey="new"
 						onSubmit={async (value) => {
@@ -209,11 +242,15 @@ function NewSession() {
 						}}
 						sending={start.isPending}
 						disabled={!selected}
-						placeholder={selected ? "What should Claude Code do?" : "Pick a folder first"}
+						placeholder={
+							selected
+								? `What should ${provider === "codex" ? "Codex" : "Claude Code"} do?`
+								: "Pick a folder first"
+						}
 						mode={mode}
 						onModeChange={(m) => {
 							setMode(m);
-							setPrefs({ permissionMode: m });
+							if (provider === "claude") setPrefs({ permissionMode: m });
 						}}
 						allowBypass={system.data?.allowBypass ?? true}
 						model={model}
@@ -221,13 +258,14 @@ function NewSession() {
 						onLocalCommand={onLocalCommand}
 						onModelChange={(m) => {
 							setModel(m);
-							setPrefs({ model: m });
+							if (provider === "claude") setPrefs({ model: m });
 						}}
 					/>
 				</div>
 			</div>
 
 			<EffortSheet
+				persistDefault={provider === "claude"}
 				open={effortOpen}
 				onOpenChange={setEffortOpen}
 				current={effortLevel}

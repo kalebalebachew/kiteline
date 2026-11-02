@@ -239,7 +239,10 @@ function LiveCard({ run, title }: { run: RunSummary; title: string }) {
 			className="bg-surface shadow-card block rounded-2xl p-4 transition-transform active:scale-[0.99]"
 		>
 			<div className="flex items-center justify-between gap-3">
-				<StatusPill status={run.status} />
+				<div className="flex items-center gap-2">
+					<StatusPill status={run.status} />
+					<span className="text-faint text-[12px]">{run.provider === "codex" ? "Codex" : "Claude"}</span>
+				</div>
 				<span className="text-faint text-[13px]">{relativeTime(run.lastActivity)}</span>
 			</div>
 			<p className="mt-3 line-clamp-2 text-[16px] leading-snug font-medium">{title}</p>
@@ -272,6 +275,7 @@ function SessionRow({ session, live, first }: { session: SessionInfo; live?: Run
 					<p className="truncate text-[15px] leading-snug font-medium">{session.title}</p>
 					<div className="text-muted-foreground mt-1 flex min-w-0 items-center gap-3 text-[13px]">
 						<div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+							<span className="flex-none">{session.provider === "codex" ? "Codex" : "Claude"}</span>
 							{session.cwd ? (
 								<span className="flex max-w-[60%] min-w-0 flex-none items-center gap-1.5">
 									<FolderSimpleIcon weight="fill" className="text-icon size-3.5 flex-none" />

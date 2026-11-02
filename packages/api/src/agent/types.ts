@@ -4,6 +4,9 @@
  * shapes and never receives image data or multi-megabyte tool output.
  */
 
+export const AGENT_PROVIDERS = ["claude", "codex"] as const;
+export type AgentProvider = (typeof AGENT_PROVIDERS)[number];
+
 export const PERMISSION_MODES = ["default", "acceptEdits", "plan", "auto", "bypassPermissions"] as const;
 export type PermissionModeId = (typeof PERMISSION_MODES)[number];
 
@@ -63,6 +66,7 @@ export type Item =
 export type RunStatus = "starting" | "running" | "waiting" | "idle" | "closed" | "error";
 
 export type RunMeta = {
+	provider: AgentProvider;
 	model: string | null;
 	permissionMode: PermissionModeId | null;
 	slashCommands: string[];
@@ -86,6 +90,8 @@ export type RunUsage = {
 
 export type PermissionRequest = {
 	id: string;
+	/** The tool item when the runtime uses a separate id for each approval callback. */
+	toolUseId?: string;
 	toolName: string;
 	input: Record<string, unknown>;
 	title: string | null;
@@ -135,6 +141,7 @@ export type RunEvent =
 	| { type: "permission-resolved"; id: string };
 
 export type RunSummary = {
+	provider: AgentProvider;
 	sessionId: string;
 	cwd: string;
 	title: string;
@@ -145,6 +152,7 @@ export type RunSummary = {
 };
 
 export type SessionInfo = {
+	provider: AgentProvider;
 	sessionId: string;
 	title: string;
 	firstPrompt: string | null;

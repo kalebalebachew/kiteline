@@ -49,7 +49,7 @@ export function PairScreen({ initialError }: { initialError?: string | null }) {
 				<Wordmark />
 				<h1 className="mt-10 text-[28px] leading-tight font-semibold tracking-[-0.025em]">Pair this phone</h1>
 				<p className="text-muted-foreground mt-2 text-[15px] leading-relaxed">
-					Kiteline runs Claude Code on your computer. Pair once and this phone stays connected.
+					Kiteline runs Claude Code or Codex on your computer. Pair once and this phone stays connected.
 				</p>
 
 				<ol className="mt-8 space-y-4">

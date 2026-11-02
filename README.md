@@ -1,7 +1,7 @@
 <div align="center">
   <img src="apps/web/public/logo.svg" width="88" alt="" />
   <h1>Kiteline</h1>
-  <p><strong>Your terminal, in your pocket.</strong><br />Drive Claude Code on your computer from your phone.</p>
+  <p><strong>Your terminal, in your pocket.</strong><br />Drive Claude Code or Codex on your computer from your phone.</p>
   <p><a href="https://kiteline.seefun.dev/">Website</a> · <a href="https://kiteline.seefun.dev/docs/">Docs</a> · <a href="#quick-start">Quick start</a></p>
 </div>
 
@@ -9,9 +9,9 @@
   <img src="docs/kiteline-demo.webp" width="880" alt="On the phone, Claude Code reads and searches the project, edits src/auth.ts, and runs the tests on its own in Auto mode; the line changes in the editor on the computer as the edit lands, and the reply arrives on the phone." />
 </p>
 
-Kiteline runs Claude Code on your computer and puts every session on your phone. Pick up where you left off, start something new, and approve what it does from wherever you are.
+Kiteline runs Claude Code and Codex on your computer and puts their sessions on your phone. Pick up where you left off, start something new, and approve what it does from wherever you are.
 
-It's self-hosted: your phone talks straight to your computer, and Claude Code keeps running there with your files, your settings and your login.
+It's self-hosted: your phone talks straight to your computer, and your agent keeps running there with your files, your settings and your login.
 
 ## What you can do
 
@@ -24,7 +24,7 @@ It's self-hosted: your phone talks straight to your computer, and Claude Code ke
 
 ## Quick start
 
-You need Node.js 22.18 or newer, and Claude Code signed in on the computer.
+You need Node.js 22.18 or newer, and Claude Code or Codex signed in on the computer.
 
 ```bash
 npx kiteline --relay
@@ -45,6 +45,16 @@ Everything else is in the **[docs](https://kiteline.seefun.dev/docs/)**:
 - [Keep it running](https://kiteline.seefun.dev/docs/#always-on) all the time, even with the lid closed
 - [Approvals](https://kiteline.seefun.dev/docs/#approve) and [permission modes](https://kiteline.seefun.dev/docs/#modes)
 - [Configuration](https://kiteline.seefun.dev/docs/#config), [security](https://kiteline.seefun.dev/docs/#security) and [troubleshooting](https://kiteline.seefun.dev/docs/#troubleshooting)
+
+## Codex
+
+Install the Codex CLI on the computer running Kiteline and sign in with `codex login`. In **New session**, choose **Agent: Codex**. Kiteline uses `codex app-server` with your existing Codex configuration and login. Set `CODEX_PATH` if the executable isn't on the server's `PATH`.
+
+Codex sessions appear alongside Claude sessions. You can start or resume them, stream replies, view commands and file diffs, approve or decline command and file requests, answer questions, interrupt turns, and rename sessions. Models come from your installed Codex catalog; model, effort, and permission changes apply from the next turn. Effort changes apply only to that session.
+
+Codex offers **Ask** (read-only sandbox, with approval requests to leave it), **Edits** (writes within the project, with requests for access outside the sandbox), and **Bypass** (no sandbox or approvals, when enabled on the server). Claude's Plan and Auto modes aren't offered for Codex. Persistent “always allow” rules and additional Codex approval types aren't supported; unsupported requests are rejected rather than granted. Codex usage costs aren't shown.
+
+The integration was checked against Codex CLI 0.165.0. See the [official Codex app-server documentation](https://learn.chatgpt.com/docs/app-server) for its protocol.
 
 ## Good to know
 

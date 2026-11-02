@@ -47,6 +47,7 @@ const limiter = new PairLimiter();
 
 const manager = new RunManager({
 	claudePath: settings.claudePath ?? null,
+	codexPath: settings.codexPath ?? null,
 	allowBypass,
 	maxLiveRuns: settings.maxSessions,
 	idleTimeoutMs: settings.idleMinutes * 60_000,

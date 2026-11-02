@@ -24,6 +24,8 @@ type Question = {
 };
 
 type Props = {
+	agentName?: string;
+	allowFeedback?: boolean;
 	request: PermissionRequest | null;
 	queued: number;
 	cwd: string | null;
@@ -91,7 +93,16 @@ function Sending() {
 const fieldClass =
 	"w-full rounded-xl bg-surface-2 px-3.5 text-[16px] outline-none placeholder:text-faint focus-visible:bg-surface-3 focus-visible:outline-none";
 
-export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDecide }: Props) {
+export function PermissionSheet({
+	request,
+	queued,
+	cwd,
+	open,
+	onOpenChange,
+	onDecide,
+	agentName = "Claude Code",
+	allowFeedback = true,
+}: Props) {
 	const [busy, setBusy] = useState<string | null>(null);
 	const [feedback, setFeedback] = useState("");
 	const [denying, setDenying] = useState(false);
@@ -123,7 +134,7 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 	const eyebrow = (
 		<Asker
 			icon={summary.icon}
-			label={request.fromSubagent ? "A sub-agent needs you" : "Claude Code needs you"}
+			label={request.fromSubagent ? "A sub-agent needs you" : `${agentName} needs you`}
 			cwd={cwd}
 			queued={queued}
 		/>
@@ -294,13 +305,15 @@ export function PermissionSheet({ request, queued, cwd, open, onOpenChange, onDe
 	// Saying no is its own step: room to tell Claude what to do instead, then a clear second press.
 	const denyFooter = (
 		<div className="space-y-2">
-			<textarea
-				value={feedback}
-				onChange={(e) => setFeedback(e.target.value)}
-				rows={2}
-				placeholder={isPlan ? "What should change in the plan?" : "Tell Claude what to do instead (optional)"}
-				className={cn(fieldClass, "block resize-none py-3")}
-			/>
+			{allowFeedback ? (
+				<textarea
+					value={feedback}
+					onChange={(e) => setFeedback(e.target.value)}
+					rows={2}
+					placeholder={isPlan ? "What should change in the plan?" : "Add a note (optional)"}
+					className={cn(fieldClass, "block resize-none py-3")}
+				/>
+			) : null}
 			<div className="flex gap-2">
 				<Button
 					variant="secondary"

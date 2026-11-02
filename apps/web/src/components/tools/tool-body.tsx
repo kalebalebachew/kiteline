@@ -115,6 +115,23 @@ export function ToolBody({ tool, cwd, children }: { tool: Tool; cwd: string | nu
 					{result ? <Output result={result} /> : null}
 				</div>
 			);
+		case "CodexFileChange": {
+			const changes = Array.isArray(input.changes) ? (input.changes as { path: string; diff: string }[]) : [];
+			return (
+				<div className="space-y-2">
+					{changes.map((change) => (
+						<CodeBlock
+							key={change.path}
+							code={str(change.diff)}
+							lang="diff"
+							label={relativeTo(str(change.path), cwd)}
+							maxHeight="22rem"
+						/>
+					))}
+					{result?.isError ? <Output result={result} /> : null}
+				</div>
+			);
+		}
 		case "Edit":
 		case "MultiEdit":
 			return (

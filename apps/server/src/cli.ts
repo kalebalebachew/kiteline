@@ -7,7 +7,7 @@ import { startedFromCli } from "./config";
 
 const HELP = `
   ${accent("◆")}  ${bold("Kiteline")} ${dim(pkg.version)}
-     Drive Claude Code on this computer from your phone.
+     Drive Claude Code or Codex on this computer from your phone.
 
   ${bold("Usage")}
     kiteline                     Start Kiteline and show the code that pairs your phone

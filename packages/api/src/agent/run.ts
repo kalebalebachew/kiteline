@@ -96,6 +96,7 @@ export class Run {
 		this.sessionId = options.sessionId;
 		this.cwd = options.cwd;
 		this.meta = {
+			provider: "claude",
 			model: options.model,
 			permissionMode: options.permissionMode,
 			slashCommands: [],

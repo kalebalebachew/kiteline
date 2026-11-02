@@ -1,12 +1,13 @@
-import type { PermissionModeId } from "@kiteline/api/agent/types";
+import type { AgentProvider, PermissionModeId } from "@kiteline/api/agent/types";
 import { cn } from "@kiteline/ui/lib/utils";
 import { ArrowUpIcon, ImageSquareIcon, StopIcon, XIcon } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-
 import type { EffortLevel } from "@/lib/effort";
 import { type Attachment, toAttachment } from "@/lib/images";
 import { MODELS, MODES, modeInfo, modelLabel } from "@/lib/modes";
+import { orpc } from "@/lib/orpc";
 import { usePrefs } from "@/lib/prefs";
 
 import { EffortGlyph } from "./effort-sheet";
@@ -37,6 +38,7 @@ function writeDraft(key: string | undefined, text: string) {
 export type ComposerSubmit = { text: string; images: Attachment[] };
 
 type ComposerProps = {
+	provider?: AgentProvider;
 	onSubmit: (value: ComposerSubmit) => Promise<boolean> | boolean;
 	onStop?: () => void;
 	running?: boolean;
@@ -60,6 +62,7 @@ type ComposerProps = {
 };
 
 export function Composer({
+	provider = "claude",
 	onSubmit,
 	onStop,
 	running,
@@ -79,6 +82,31 @@ export function Composer({
 	draftKey,
 }: ComposerProps) {
 	const prefs = usePrefs();
+	const catalog = useQuery(
+		orpc.runs.models.queryOptions({
+			input: { provider },
+			enabled: provider === "codex",
+			staleTime: 60_000,
+		}),
+	);
+	const models =
+		provider === "codex"
+			? [{ id: null, title: "Default", description: "Your Codex settings" }, ...(catalog.data ?? [])]
+			: MODELS;
+	const modes =
+		provider === "codex"
+			? MODES.filter((entry) => ["default", "acceptEdits", "bypassPermissions"].includes(entry.id)).map(
+					(entry) => ({
+						...entry,
+						description:
+							entry.id === "default"
+								? "Read-only sandbox. Codex asks to run outside it."
+								: entry.id === "acceptEdits"
+									? "Writes in this project. Asks for access outside the sandbox."
+									: entry.description,
+					}),
+				)
+			: MODES;
 	const [text, setText] = useState(() => readDraft(draftKey));
 	useEffect(() => writeDraft(draftKey, text), [draftKey, text]);
 	const [images, setImages] = useState<Attachment[]>([]);
@@ -100,11 +128,12 @@ export function Composer({
 	const commandQuery = /^\/([\w:-]*)$/.exec(text)?.[1];
 	const commands = useMemo(() => {
 		if (commandQuery === undefined) return [];
-		const all = [...(slashCommands?.length ? slashCommands : FALLBACK_COMMANDS), ...LOCAL_COMMANDS].map((c) =>
-			c.replace(/^\//, ""),
-		);
+		const all = [
+			...(provider === "codex" ? [] : slashCommands?.length ? slashCommands : FALLBACK_COMMANDS),
+			...LOCAL_COMMANDS,
+		].map((c) => c.replace(/^\//, ""));
 		return [...new Set(all)].filter((c) => c.toLowerCase().includes(commandQuery.toLowerCase())).slice(0, 7);
-	}, [commandQuery, slashCommands]);
+	}, [commandQuery, slashCommands, provider]);
 
 	const empty = !text.trim() && !images.length;
 	const canSend = !empty && !disabled && !sending;
@@ -269,16 +298,18 @@ export function Composer({
 						</MenuTrigger>
 						<MenuContent className="w-72">
 							<MenuRadioGroup value={mode} onValueChange={onModeChange} label="Permissions">
-								{MODES.filter((m) => allowBypass || m.id !== "bypassPermissions").map((m) => (
-									<MenuRadioItem
-										key={m.id}
-										value={m.id}
-										title={m.title}
-										description={m.description}
-										icon={<m.icon weight="fill" className="size-4" />}
-										tone={m.id === "bypassPermissions" ? "danger" : undefined}
-									/>
-								))}
+								{modes
+									.filter((m) => allowBypass || m.id !== "bypassPermissions")
+									.map((m) => (
+										<MenuRadioItem
+											key={m.id}
+											value={m.id}
+											title={m.title}
+											description={m.description}
+											icon={<m.icon weight="fill" className="size-4" />}
+											tone={m.id === "bypassPermissions" ? "danger" : undefined}
+										/>
+									))}
 							</MenuRadioGroup>
 						</MenuContent>
 					</Menu>
@@ -295,7 +326,7 @@ export function Composer({
 								onValueChange={(v) => onModelChange(v === "__default" ? null : v)}
 								label="Model"
 							>
-								{MODELS.map((m) => (
+								{models.map((m) => (
 									<MenuRadioItem
 										key={m.title}
 										value={m.id ?? "__default"}

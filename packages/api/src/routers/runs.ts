@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { EFFORT_LEVELS, PERMISSION_MODES } from "../agent/types";
+import { AGENT_PROVIDERS, EFFORT_LEVELS, PERMISSION_MODES } from "../agent/types";
 import { protectedProcedure } from "../index";
 
 const permissionMode = z.enum(PERMISSION_MODES);
@@ -38,6 +38,7 @@ export const runsRouter = {
 	send: protectedProcedure
 		.input(
 			z.object({
+				provider: z.enum(AGENT_PROVIDERS).optional(),
 				sessionId: z.uuid().optional(),
 				cwd: z.string().min(1).optional(),
 				text: z.string().max(200_000),
@@ -82,8 +83,18 @@ export const runsRouter = {
 
 	/** Where a session that isn't running would start: for the effort sheet before anything is live. */
 	effortFor: protectedProcedure
-		.input(z.object({ cwd: z.string().min(1).nullable(), model: z.string().max(100).nullable() }))
-		.handler(({ input, context }) => context.manager.effortFor(input.cwd, input.model)),
+		.input(
+			z.object({
+				cwd: z.string().min(1).nullable(),
+				model: z.string().max(100).nullable(),
+				provider: z.enum(AGENT_PROVIDERS).optional(),
+			}),
+		)
+		.handler(({ input, context }) => context.manager.effortFor(input.cwd, input.model, input.provider)),
+
+	models: protectedProcedure
+		.input(z.object({ provider: z.enum(AGENT_PROVIDERS) }))
+		.handler(({ input, context }) => context.manager.modelsFor(input.provider)),
 
 	stop: protectedProcedure.input(session).handler(({ input, context }) => {
 		context.manager.stop(input.sessionId);

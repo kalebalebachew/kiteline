@@ -14,6 +14,7 @@ const MAX_CACHED = 12;
 
 function toInfo(s: Awaited<ReturnType<typeof listSessions>>[number]): SessionInfo {
 	return {
+		provider: "claude",
 		sessionId: s.sessionId,
 		title: s.customTitle || s.summary || s.firstPrompt || "Untitled session",
 		firstPrompt: s.firstPrompt ?? null,

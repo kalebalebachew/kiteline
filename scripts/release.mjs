@@ -39,7 +39,7 @@ const app = JSON.parse(readFileSync(join(server, "package.json"), "utf8"));
 const pkg = {
 	name: "kiteline",
 	version: app.version,
-	description: "Drive Claude Code on your computer from your phone.",
+	description: "Drive Claude Code or Codex on your computer from your phone.",
 	keywords: [
 		"claude",
 		"claude-code",

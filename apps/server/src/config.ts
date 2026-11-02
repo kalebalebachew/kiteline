@@ -17,6 +17,7 @@ export type Settings = {
 	token: string | undefined;
 	home: string | undefined;
 	claudePath: string | undefined;
+	codexPath: string | undefined;
 	allowBypass: boolean;
 	maxSessions: number;
 	idleMinutes: number;
@@ -90,6 +91,7 @@ export function readSettings(): Settings {
 		token: text("KITELINE_TOKEN"),
 		home: text("KITELINE_HOME"),
 		claudePath: text("CLAUDE_PATH"),
+		codexPath: text("CODEX_PATH"),
 		allowBypass: yesNo("KITELINE_ALLOW_BYPASS", "Allowing Bypass mode", true),
 		maxSessions: whole("KITELINE_MAX_SESSIONS", "The session limit", 6, 1, 100),
 		idleMinutes: whole("KITELINE_IDLE_MINUTES", "The idle time", 20, 1, 7 * 24 * 60),

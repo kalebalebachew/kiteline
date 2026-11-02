@@ -10,6 +10,7 @@ import { EFFORT, EFFORT_LEVELS, type EffortLevel, fitLevel, MAX_WARNING } from "
 import { errorMessage } from "@/lib/orpc";
 
 type Props = {
+	persistDefault?: boolean;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	/** The level the session runs at now, or will start at. */
@@ -36,7 +37,15 @@ function Sending() {
  * `/effort` on a phone: Claude Code's slider from Faster to Smarter. Set is the terminal's Enter: this
  * session, and the default for new sessions on the model too. Max is only ever for this session.
  */
-export function EffortSheet({ open, onOpenChange, current, levels, modelName, onChoose }: Props) {
+export function EffortSheet({
+	open,
+	onOpenChange,
+	current,
+	levels,
+	modelName,
+	onChoose,
+	persistDefault = true,
+}: Props) {
 	const offered = levels ?? EFFORT_LEVELS;
 	const [index, setIndex] = useState(() => startIndex(current, offered));
 	const [busy, setBusy] = useState<"set" | "session" | null>(null);
@@ -75,7 +84,7 @@ export function EffortSheet({ open, onOpenChange, current, levels, modelName, on
 	) : (
 		<div className="space-y-2.5">
 			<div className="flex gap-2">
-				{level !== "max" ? (
+				{persistDefault && level !== "max" ? (
 					<Button
 						variant="secondary"
 						size="lg"
@@ -86,14 +95,21 @@ export function EffortSheet({ open, onOpenChange, current, levels, modelName, on
 						{busy === "session" ? <Sending /> : "This session only"}
 					</Button>
 				) : null}
-				<Button size="lg" className="flex-[1.3]" disabled={!!busy} onClick={() => void choose(true)}>
-					{busy === "set" ? <Sending /> : `Set to ${level}`}
+				<Button
+					size="lg"
+					className="flex-[1.3]"
+					disabled={!!busy}
+					onClick={() => void choose(persistDefault)}
+				>
+					{busy ? <Sending /> : `Set to ${level}`}
 				</Button>
 			</div>
 			<p className="text-faint text-center text-[12px] leading-snug">
-				{level === "max"
-					? "Max lasts for this session only."
-					: `Set also makes ${level} your default for new ${modelName ? `${modelName} ` : ""}sessions.`}
+				{!persistDefault
+					? "Applies from the next turn in this session."
+					: level === "max"
+						? "Max lasts for this session only."
+						: `Set also makes ${level} your default for new ${modelName ? `${modelName} ` : ""}sessions.`}
 			</p>
 		</div>
 	);

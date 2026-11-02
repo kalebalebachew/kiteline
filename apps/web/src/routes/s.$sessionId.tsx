@@ -53,6 +53,8 @@ function SessionPage() {
 	const history = useHistory(sessionId);
 	const { run, retired, connected } = useRunStream(sessionId);
 
+	const provider = run?.meta.provider ?? info.data?.provider ?? "claude";
+	const agentName = provider === "codex" ? "Codex" : "Claude Code";
 	const live = !!run && run.status !== "closed" && run.status !== "error";
 	const working = live && (run.status === "running" || run.status === "starting");
 	const status: DisplayStatus = run && live ? run.status : run?.status === "error" ? "error" : "asleep";
@@ -68,14 +70,21 @@ function SessionPage() {
 	// Mode and model: the live process is the source of truth; otherwise the next send uses these.
 	const [mode, setMode] = useState<PermissionModeId>(prefs.permissionMode);
 	const [model, setModel] = useState<string | null>(prefs.model);
-	const liveMode = live ? (run.meta.permissionMode ?? mode) : mode;
+	const [codexMode, setCodexMode] = useState<PermissionModeId>("default");
+	const [codexModel, setCodexModel] = useState<string | null>(null);
+	const selectedModel = provider === "codex" ? codexModel : model;
+	const liveMode = live ? (run.meta.permissionMode ?? mode) : provider === "codex" ? codexMode : mode;
 
 	// Effort: a live process says what it runs at. Asleep, it's what the next message would wake to:
 	// a level picked here meanwhile, else where Claude Code would start it.
 	const [effortOpen, setEffortOpen] = useState(false);
 	const [pendingEffort, setPendingEffort] = useState<EffortChoice | null>(null);
 	const startingEffort = useQuery(
-		orpc.runs.effortFor.queryOptions({ input: { cwd, model }, enabled: !live && !!cwd, staleTime: 30_000 }),
+		orpc.runs.effortFor.queryOptions({
+			input: { cwd, model: selectedModel, provider },
+			enabled: !live && !!cwd,
+			staleTime: 30_000,
+		}),
 	);
 	const asleepLevel = pendingEffort
 		? (pendingEffort.level ?? startingEffort.data?.modelDefault ?? null)
@@ -85,12 +94,15 @@ function SessionPage() {
 		: {
 				level: asleepLevel,
 				levels: startingEffort.data?.levels ?? null,
-				model: startingEffort.data?.model ?? model,
+				model: startingEffort.data?.model ?? selectedModel,
 			};
 	const effortModel = effort.model ? modelLabel(effort.model) : null;
 
 	const permissions = run?.permissions ?? [];
-	const pendingIds = useMemo(() => new Set(permissions.map((p) => p.id)), [permissions]);
+	const pendingIds = useMemo(
+		() => new Set(permissions.flatMap((p) => [p.id, ...(p.toolUseId ? [p.toolUseId] : [])])),
+		[permissions],
+	);
 	const [sheetFor, setSheetFor] = useState<string | null>(null);
 	const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
 	// The sheet shows the request you opened, or the first one you haven't swiped away; once every
@@ -128,7 +140,7 @@ function SessionPage() {
 					text: value.text,
 					images: value.images.map(({ mediaType, data }) => ({ mediaType, data })),
 					permissionMode: liveMode,
-					model,
+					model: selectedModel,
 					effort: effortChoice,
 				});
 			} catch (error) {
@@ -149,9 +161,10 @@ function SessionPage() {
 	}, [live, pendingEffort, sessionId]);
 
 	const chooseEffort = async (choice: EffortChoice) => {
-		if (live) await client.runs.setEffort({ sessionId, effort: choice });
-		else setPendingEffort(choice);
-		const { title, description } = describeChoice(choice, {
+		const selectedChoice = { ...choice, persist: provider === "claude" && choice.persist };
+		if (live) await client.runs.setEffort({ sessionId, effort: selectedChoice });
+		else setPendingEffort(selectedChoice);
+		const { title, description } = describeChoice(selectedChoice, {
 			levels: effort.levels,
 			modelName: effortModel,
 			modelDefault: startingEffort.data?.modelDefault,
@@ -186,10 +199,14 @@ function SessionPage() {
 
 	const stopTurn = () => void client.runs.interrupt({ sessionId }).catch((e) => toast.error(errorMessage(e)));
 
-	const openPermission = useCallback((id: string) => {
-		setSheetFor(id);
-		setDismissed((d) => new Set([...d].filter((x) => x !== id)));
-	}, []);
+	const openPermission = useCallback(
+		(toolId: string) => {
+			const id = permissions.find((request) => request.toolUseId === toolId)?.id ?? toolId;
+			setSheetFor(id);
+			setDismissed((d) => new Set([...d].filter((x) => x !== id)));
+		},
+		[permissions],
+	);
 	// Ids from this visit's live process: only those can still be running.
 	const liveIds = useMemo(() => new Set((run?.items ?? []).map((i) => i.id)), [run?.items]);
 	const toolProgress = run?.toolProgress ?? NO_PROGRESS;
@@ -199,8 +216,11 @@ function SessionPage() {
 	);
 
 	const changeMode = async (next: PermissionModeId) => {
-		setMode(next);
-		setPrefs({ permissionMode: next });
+		if (provider === "codex") setCodexMode(next);
+		else {
+			setMode(next);
+			setPrefs({ permissionMode: next });
+		}
 		if (live)
 			await client.runs
 				.setPermissionMode({ sessionId, mode: next })
@@ -208,8 +228,11 @@ function SessionPage() {
 	};
 
 	const changeModel = async (next: string | null) => {
-		setModel(next);
-		setPrefs({ model: next });
+		if (provider === "codex") setCodexModel(next);
+		else {
+			setModel(next);
+			setPrefs({ model: next });
+		}
 		if (live)
 			await client.runs.setModel({ sessionId, model: next }).catch((e: Error) => toast.error(e.message));
 	};
@@ -265,7 +288,8 @@ function SessionPage() {
 							</MenuItem>
 							<MenuItem
 								onClick={async () => {
-									const command = `cd ${JSON.stringify(cwd ?? ".")} && claude --resume ${sessionId}`;
+									const folder = `'${(cwd ?? ".").replaceAll("'", "'\\''")}'`;
+									const command = `cd ${folder} && ${provider === "codex" ? "codex resume" : "claude --resume"} ${sessionId}`;
 									if (await copyText(command)) toast.success("Resume command copied");
 								}}
 							>
@@ -293,7 +317,7 @@ function SessionPage() {
 										}
 									>
 										<PowerIcon weight="bold" className="size-4" />
-										Stop the Claude Code process
+										Stop the {agentName} process
 									</MenuItem>
 								</>
 							) : null}
@@ -341,7 +365,7 @@ function SessionPage() {
 									) : null}
 									{run?.status === "error" && run.error ? (
 										<p className="bg-destructive-soft text-destructive rounded-xl px-3.5 py-2.5 text-[13px]">
-											The Claude Code process stopped: {run.error}
+											The {agentName} process stopped: {run.error}
 										</p>
 									) : null}
 								</>
@@ -375,7 +399,7 @@ function SessionPage() {
 							<ShieldWarningIcon weight="fill" className="size-4 flex-none" />
 							<span className="flex-1">
 								{permissions.length === 1
-									? "Claude Code is waiting for you"
+									? `${agentName} is waiting for you`
 									: `${permissions.length} requests waiting`}
 							</span>
 							<span className="text-[13px] opacity-80">Review</span>
@@ -390,6 +414,7 @@ function SessionPage() {
 					) : null}
 
 					<Composer
+						provider={provider}
 						onSubmit={async (value) => {
 							try {
 								await send.mutateAsync(value);
@@ -407,7 +432,7 @@ function SessionPage() {
 						mode={liveMode}
 						onModeChange={(m) => void changeMode(m)}
 						allowBypass={system.data?.allowBypass ?? true}
-						model={model}
+						model={selectedModel}
 						modelInUse={live ? run.meta.model : null}
 						onModelChange={(m) => void changeModel(m)}
 						effort={{ level: effort.level, levels: effort.levels, onOpen: () => setEffortOpen(true) }}
@@ -417,6 +442,8 @@ function SessionPage() {
 			</div>
 
 			<PermissionSheet
+				agentName={agentName}
+				allowFeedback={provider === "claude"}
 				request={current}
 				queued={permissions.length}
 				cwd={cwd}
@@ -432,6 +459,7 @@ function SessionPage() {
 			/>
 
 			<EffortSheet
+				persistDefault={provider === "claude"}
 				open={effortOpen}
 				onOpenChange={setEffortOpen}
 				current={effort.level}

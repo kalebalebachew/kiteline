@@ -76,6 +76,15 @@ export function describeTool(tool: Tool, cwd: string | null): ToolSummary {
 				meta: input.run_in_background ? [{ text: "background", tone: "muted" }] : undefined,
 			};
 		}
+		case "CodexFileChange": {
+			const changes = Array.isArray(input.changes) ? input.changes : [];
+			return {
+				icon: NotePencilIcon,
+				verb: "File changes",
+				target: changes.length === 1 ? relativeTo(str(changes[0]?.path), cwd) : `${changes.length} files`,
+				mono: changes.length === 1,
+			};
+		}
 		case "Read": {
 			const offset = typeof input.offset === "number" ? input.offset : null;
 			const limit = typeof input.limit === "number" ? input.limit : null;

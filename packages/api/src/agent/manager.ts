@@ -1,24 +1,29 @@
 import { randomUUID } from "node:crypto";
 import { stat } from "node:fs/promises";
 
-import { getSessionInfo } from "@anthropic-ai/claude-agent-sdk";
-
+import { CodexHistory, codexInfo } from "./codex-history";
+import { CodexRun, codexPolicy } from "./codex-run";
 import { EffortCatalog } from "./effort";
+import { historyPage, listAllSessions, rename, sessionInfo } from "./history";
 import { AsyncQueue } from "./queue";
 import { type ImageInput, Run } from "./run";
 import type { SessionTracker } from "./tracker";
 import type {
+	AgentProvider,
 	EffortChoice,
 	EffortInfo,
+	HistoryPage,
 	PermissionDecision,
 	PermissionModeId,
 	RunEvent,
 	RunSnapshot,
 	RunSummary,
+	SessionInfo,
 } from "./types";
 
 export type ManagerConfig = {
 	claudePath: string | null;
+	codexPath: string | null;
 	allowBypass: boolean;
 	maxLiveRuns: number;
 	/** An idle session's process is stopped after this long; the next message resumes it. */
@@ -27,6 +32,7 @@ export type ManagerConfig = {
 };
 
 export type SendInput = {
+	provider?: AgentProvider;
 	sessionId?: string;
 	cwd?: string;
 	text: string;
@@ -38,7 +44,8 @@ export type SendInput = {
 };
 
 export class RunManager {
-	private readonly runs = new Map<string, Run>();
+	private readonly runs = new Map<string, Run | CodexRun>();
+	private readonly initializing = new Set<CodexRun>();
 	/** Sessions being woken right now, so a second send waits and joins the same run. */
 	private readonly starting = new Map<string, Promise<void>>();
 	/** Runs that died with an error, kept a few minutes so a reconnecting phone still sees why. */
@@ -47,9 +54,12 @@ export class RunManager {
 	private readonly listWatchers = new Set<AsyncQueue<RunSummary[]>>();
 	private listTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly effort: EffortCatalog;
+	private readonly codex: CodexHistory;
+	private readonly providers = new Map<string, AgentProvider>();
 
 	constructor(private readonly config: ManagerConfig) {
 		this.effort = new EffortCatalog(config.claudePath);
+		this.codex = new CodexHistory(config.codexPath);
 		setInterval(() => this.reap(), 30_000).unref();
 		// Learning the models takes Claude Code a few seconds; do it before a phone asks.
 		setTimeout(() => void this.effort.startingPoint(null, null).catch(() => {}), 3_000).unref();
@@ -67,6 +77,7 @@ export class RunManager {
 		return [...this.runs.values()]
 			.filter((run) => run.isLive)
 			.map((run) => ({
+				provider: run.meta.provider,
 				sessionId: run.sessionId,
 				cwd: run.cwd,
 				title: run.title,
@@ -93,8 +104,10 @@ export class RunManager {
 
 		const live = input.sessionId ? this.runs.get(input.sessionId) : undefined;
 		if (live?.isLive) {
+			if (input.provider && input.provider !== live.meta.provider)
+				throw new Error("A session cannot change agents.");
 			// The phone thought it was asleep; the level it picked still comes first.
-			if (input.effort) await live.setEffort(input.effort).catch(() => {});
+			if (input.effort) await live.setEffort(input.effort);
 			live.send(text, input.images);
 			return { sessionId: live.sessionId };
 		}
@@ -111,19 +124,23 @@ export class RunManager {
 		}
 	}
 
-	/** Starts a Claude Code process for a new session, or wakes a sleeping one, and sends to it. */
+	/** Starts the selected agent, or resumes the agent that owns an existing session. */
 	private async start(input: SendInput, text: string): Promise<{ sessionId: string }> {
 		this.checkLimit();
 
+		let provider = input.provider ?? "claude";
 		let cwd = input.cwd;
 		let resume = false;
 		let sessionId = input.sessionId;
 		let title = "";
 		if (sessionId) {
-			const info = await getSessionInfo(sessionId);
+			const info = await this.sessionInfo(sessionId);
 			if (!info?.cwd) throw new Error("Kiteline can't find that session on this computer.");
 			cwd = info.cwd;
-			title = info.customTitle || info.summary || "";
+			title = info.title;
+			if (input.provider && input.provider !== info.provider)
+				throw new Error("A session cannot change agents.");
+			provider = info.provider;
 			resume = true;
 		} else {
 			sessionId = randomUUID();
@@ -133,6 +150,42 @@ export class RunManager {
 		if (!folder?.isDirectory()) throw new Error(`${cwd} isn't a folder on this computer.`);
 		// Count again: another session may have started while this one looked up its folder.
 		this.checkLimit();
+
+		if (provider === "codex") {
+			codexPolicy(input.permissionMode ?? "default");
+			let codexId = input.sessionId ?? "";
+			const run = new CodexRun(
+				cwd,
+				this.config.codexPath,
+				input.permissionMode ?? "default",
+				input.model ?? null,
+				this.config.allowBypass,
+				(event) => {
+					if (codexId) this.broadcast(codexId, event);
+				},
+				() => this.scheduleListUpdate(),
+			);
+			this.initializing.add(run);
+			try {
+				await run.initialize(input.sessionId, input.effort);
+			} finally {
+				this.initializing.delete(run);
+			}
+			try {
+				this.checkLimit();
+			} catch (error) {
+				run.close();
+				throw error;
+			}
+			codexId = run.sessionId;
+			this.failed.delete(codexId);
+			this.runs.set(codexId, run);
+			this.providers.set(codexId, "codex");
+			this.config.tracker.add(codexId, cwd, "codex");
+			this.broadcast(codexId, { type: "snapshot", run: run.snapshot() });
+			run.send(text, input.images);
+			return { sessionId: codexId };
+		}
 
 		const id = sessionId;
 		this.failed.delete(id);
@@ -159,7 +212,7 @@ export class RunManager {
 	}
 
 	private checkLimit() {
-		const liveCount = [...this.runs.values()].filter((run) => run.isLive).length;
+		const liveCount = this.initializing.size + [...this.runs.values()].filter((run) => run.isLive).length;
 		if (liveCount >= this.config.maxLiveRuns) {
 			throw new Error(`${liveCount} sessions are already running. Stop one before starting another.`);
 		}
@@ -189,8 +242,73 @@ export class RunManager {
 	}
 
 	/** Where a session that isn't running would start, for the effort sheet. */
-	effortFor(cwd: string | null, model: string | null): Promise<EffortInfo> {
+	async effortFor(
+		cwd: string | null,
+		model: string | null,
+		provider: AgentProvider = "claude",
+	): Promise<EffortInfo> {
+		if (provider === "codex") return this.codex.startingPoint(cwd, model);
 		return this.effort.startingPoint(cwd, model);
+	}
+
+	async modelsFor(provider: AgentProvider) {
+		if (provider !== "codex") return [];
+		return (await this.codex.models()).map((model) => ({
+			id: model.model,
+			title: model.displayName,
+			description: model.description,
+		}));
+	}
+
+	async listSessions(options: { limit: number; cwd?: string }): Promise<SessionInfo[]> {
+		const [claude, codex] = await Promise.all([
+			listAllSessions(
+				options,
+				this.tracker.list().filter((entry) => entry.provider !== "codex"),
+			),
+			this.codex.list(options).catch(() => []),
+		]);
+		for (const session of [...claude, ...codex]) this.providers.set(session.sessionId, session.provider);
+		return [...claude, ...codex].sort((a, b) => b.lastModified - a.lastModified).slice(0, options.limit);
+	}
+
+	async sessionInfo(id: string): Promise<SessionInfo | null> {
+		const run = this.runs.get(id);
+		if (run instanceof CodexRun && run.isLive) return run.info();
+		const provider = this.providers.get(id) ?? this.tracker.list().find((entry) => entry.id === id)?.provider;
+		if (provider !== "codex") {
+			const claude = await sessionInfo(id);
+			if (claude) return claude;
+		}
+		const thread = await this.codex.read(id).catch((error: unknown) => {
+			if (provider === "codex") throw error;
+			return null;
+		});
+		if (!thread) return null;
+		this.providers.set(id, "codex");
+		return codexInfo(thread);
+	}
+
+	async history(id: string, options: { before?: number; limit: number }): Promise<HistoryPage> {
+		const info = await this.sessionInfo(id);
+		if (info?.provider !== "codex") return historyPage(id, options);
+		const run = this.runs.get(id);
+		const items = run instanceof CodexRun && run.isLive ? await run.history() : await this.codex.items(id);
+		const end = Math.min(options.before ?? items.length, items.length);
+		const start = Math.max(0, end - options.limit);
+		return { items: items.slice(start, end), start, total: items.length };
+	}
+
+	async renameSession(id: string, title: string) {
+		const info = await this.sessionInfo(id);
+		if (info?.provider === "codex") {
+			const run = this.runs.get(id);
+			if (run instanceof CodexRun && run.isLive) await run.rename(title);
+			else await this.codex.client().call("thread/name/set", { threadId: id, name: title });
+		} else await rename(id, title);
+		const run = this.runs.get(id);
+		if (run) run.title = title;
+		this.scheduleListUpdate();
 	}
 
 	stop(sessionId: string) {
@@ -198,6 +316,8 @@ export class RunManager {
 	}
 
 	stopAll() {
+		this.codex.close();
+		for (const run of this.initializing) run.close();
 		for (const run of this.runs.values()) run.close();
 	}
 
