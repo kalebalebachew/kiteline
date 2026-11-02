@@ -37,7 +37,7 @@ function CopyCode({ code }: { code: string }) {
 
 const at = (seconds: number) => ({ "--d": `${seconds}s` }) as CSSProperties;
 
-/** What `npx kiteline` prints, in the banner's own colors, cropped below the pairing link. */
+/** What `npx kiteline --relay` prints, in the banner's own colors, cropped below the pairing link. */
 function Terminal() {
 	const ref = useRef<HTMLDivElement>(null);
 	const motion = usePlayOnce(ref);
@@ -53,7 +53,7 @@ function Terminal() {
 			<div
 				className="term"
 				role="img"
-				aria-label="The terminal after npx kiteline: Kiteline's addresses and a QR code to pair your phone"
+				aria-label="The terminal after npx kiteline --relay: Kiteline's addresses and a QR code to pair your phone"
 			>
 				<div className="term__bar">
 					<span className="term__lights">
@@ -61,24 +61,24 @@ function Terminal() {
 						<i />
 						<i />
 					</span>
-					<span className="term__title">npx kiteline</span>
+					<span className="term__title">npx kiteline --relay</span>
 				</div>
 				<div className="term__body">
 					<div className="term__line">
 						<span className="t-dim">~</span> <span className="t-accent">❯</span>{" "}
-						<span className="term__typed">npx kiteline</span>
+						<span className="term__typed">npx kiteline --relay</span>
 					</div>
 					<div className="term__gap" />
 					<div className="term__line out" style={at(0.95)}>
 						{"  "}
 						<span className="t-accent">◆</span>
 						{"  "}
-						<b>Kiteline</b> <span className="t-dim">v0.1.0</span>
+						<b>Kiteline</b> <span className="t-dim">v0.2.0</span>
 					</div>
 					<div className="term__gap" />
 					<div className="term__line out" style={at(1.05)}>
 						{"  "}
-						<span className="t-dim">Network </span> http://192.168.1.20:4545
+						<span className="t-dim">Anywhere</span> https://relay.kiteline.seefun.dev
 					</div>
 					<div className="term__line out" style={at(1.12)}>
 						{"  "}
@@ -103,7 +103,7 @@ function Terminal() {
 					<div className="term__gap" />
 					<div className="term__line out" style={at(1.55)}>
 						{"  "}
-						<span className="t-accent">http://192.168.1.20:4545/#pair=Qm3xV8rT2kLp9ZwYb4NcHd7s</span>
+						<span className="t-accent">https://relay.kiteline.seefun.dev/#host=…&amp;pair=…</span>
 					</div>
 				</div>
 			</div>
@@ -125,7 +125,7 @@ export function Install() {
 						<span className="setup-step__n">1</span>
 						<div className="setup-step__body">
 							<h3>Run it on the computer where you use Claude Code</h3>
-							<CopyCode code="npx kiteline" />
+							<CopyCode code="npx kiteline --relay" />
 						</div>
 					</li>
 					<li className="setup-step">
@@ -149,7 +149,7 @@ export function Install() {
 					</span>
 					<span className="next-card__text">
 						<strong>Reach it from anywhere</strong>
-						<span>Tailscale gives your phone a private HTTPS address for it, away from home.</span>
+						<span>With --relay your phone reaches it on any network, sealed end to end.</span>
 					</span>
 					<ArrowRightIcon weight="bold" className="next-card__arrow" />
 				</a>

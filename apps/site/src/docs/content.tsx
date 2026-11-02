@@ -58,11 +58,12 @@ export function Content() {
 			</Section>
 
 			<Section id="install" title="Install" lead="One command, on the computer that runs Claude Code.">
-				<Code code="npx kiteline" />
+				<Code code="npx kiteline --relay" />
 				<p>
-					It starts Kiteline and prints the addresses your phone can use, with a QR code to pair it. Leave it
-					running while you use Kiteline. The first time takes a little longer: Kiteline brings its own copy
-					of Claude Code's engine, about 150 MB.
+					It starts Kiteline and prints a QR code to pair your phone. Leave it running while you use Kiteline.
+					With <code>--relay</code>, your phone reaches it from anywhere, sealed end to end (
+					<a href="#anywhere">how</a>); leave it out to keep Kiteline to your own Wi-Fi. The first time takes
+					a little longer: Kiteline brings its own copy of Claude Code's engine, about 150 MB.
 				</p>
 				<H3 id="install-for-good">Install it for good</H3>
 				<p>
@@ -453,8 +454,35 @@ export function Content() {
 			<Section
 				id="anywhere"
 				title="Reach it from anywhere"
-				lead="On the same Wi-Fi it just works. Everywhere else, use Tailscale: a free, private network between your own devices."
+				lead="Start Kiteline with --relay, and your phone reaches it on any network: at home, at work, on mobile data."
 			>
+				<Code code="npx kiteline --relay" />
+				<p>
+					The pairing code then opens Kiteline through its relay at <code>relay.kiteline.seefun.dev</code>,
+					wherever your phone is. Nothing to install on the phone, no account, no ports to open. Pair once, as
+					usual. Running it in the background? <code>kiteline service install --relay</code>.
+				</p>
+				<H3 id="relay-privacy">What the relay sees</H3>
+				<ul>
+					<li>
+						<strong>Not your sessions.</strong> Your phone and your computer encrypt everything between them
+						with a key made from the pairing code, which never reaches the relay. It passes on sealed messages
+						it can't read, and can't change one without both ends noticing.
+					</li>
+					<li>
+						<strong>That a computer is connected,</strong> when a phone reaches it, and how much passes
+						between them. It keeps no record of what it carried, and no accounts.
+					</li>
+					<li>
+						<strong>It serves the app your phone opens:</strong> the same files as the npm package, from the
+						published release.
+					</li>
+				</ul>
+				<H3 id="tailscale">Nothing in between: Tailscale</H3>
+				<p>
+					If you'd rather your sessions never pass through anyone's server, sealed or not, use Tailscale: a
+					free, private network between your own devices.
+				</p>
 				<Steps>
 					<Step title="Install Tailscale on your computer and your phone">
 						<p>
@@ -502,8 +530,8 @@ export function Content() {
 						<Code code="npm install -g kiteline" />
 					</Step>
 					<Step title="Set up the service">
-						<Code code="kiteline service install" />
-						<p>Using Tailscale? Give it your address, and keep Kiteline to it:</p>
+						<Code code="kiteline service install --relay" />
+						<p>Using Tailscale instead? Give it your address, and keep Kiteline to it:</p>
 						<Code
 							code={
 								"kiteline service install \\\n  --host 127.0.0.1 \\\n  --public-url https://your-computer.your-network.ts.net"
@@ -605,6 +633,11 @@ export function Content() {
 						],
 						[<code key="k">KITELINE_MAX_SESSIONS</code>, "6", "How many sessions can run at once"],
 						[
+							<code key="k">KITELINE_RELAY</code>,
+							"off",
+							"on to reach this computer from anywhere through Kiteline's relay (the same as --relay), or the address of a relay of your own",
+						],
+						[
 							<code key="k">KITELINE_IDLE_MINUTES</code>,
 							"20",
 							"Minutes before an idle session goes to sleep",
@@ -646,6 +679,10 @@ export function Content() {
 						The pairing link is printed when Kiteline starts, so it also ends up in the service log. Treat
 						that log like the link.
 					</li>
+					<li>
+						Through the relay, phone and computer encrypt everything between them with a key the relay never
+						sees: <a href="#relay-privacy">what the relay sees</a>.
+					</li>
 				</ul>
 				<H3 id="unpair">Unpair devices</H3>
 				<p>
@@ -668,6 +705,12 @@ export function Content() {
 
 			<Section id="how-it-works" title="How it works" lead="For the curious.">
 				<p>
+					With <code>--relay</code>, Kiteline keeps one connection open to the relay. When your phone asks for
+					your computer, the relay joins the two, and they set up their own encryption: a fresh key exchange
+					each time, tied to the pairing code, then AES-GCM on every message. The relay only passes sealed
+					messages along.
+				</p>
+				<p>
 					Kiteline starts Claude Code with Anthropic's Claude Agent SDK, one Claude Code process for each live
 					session. Your messages go to that process, and its replies, steps and requests stream back to your
 					phone as they happen.
@@ -684,6 +727,14 @@ export function Content() {
 			</Section>
 
 			<Section id="troubleshooting" title="Troubleshooting">
+				<Details id="relay-offline" summary="“Your computer isn't connected to the relay”">
+					<p>
+						Kiteline on your computer isn't running with <code>--relay</code>, or can't reach the relay just
+						now. Start it with <code>kiteline --relay</code> (or set up the service with{" "}
+						<code>kiteline service install --relay</code>) and look for "Connected to the relay" in what it
+						prints. It reconnects by itself after a network drop.
+					</p>
+				</Details>
 				<Details id="cant-reach" summary="“Can't reach your computer”">
 					<p>
 						Kiteline isn't running, or your phone can't see the computer. Check that Kiteline is running (in
@@ -765,8 +816,9 @@ export function Content() {
 			<Section id="faq" title="Questions">
 				<Details summary="Does my code leave my computer?">
 					<p>
-						Not because of Kiteline: your phone talks straight to your computer, and nothing passes through
-						anyone else's server. Claude Code itself works exactly as it does in your terminal.
+						Not because of Kiteline. On the same Wi-Fi or over Tailscale, your phone talks straight to your
+						computer. Through the relay, everything is sealed end to end, so the relay passes it on without
+						being able to read it. Claude Code itself works exactly as it does in your terminal.
 					</p>
 				</Details>
 				<Details summary="Does it cost anything?">

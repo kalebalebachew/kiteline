@@ -27,28 +27,28 @@ It's self-hosted: your phone talks straight to your computer, and Claude Code ke
 You need Node.js 22.18 or newer, and Claude Code signed in on the computer.
 
 ```bash
-npx kiteline
+npx kiteline --relay
 ```
 
-Scan the QR code it prints with your phone's camera, and you're in.
+Scan the QR code it prints with your phone's camera, and you're in, on any network. `--relay` connects through Kiteline's relay, sealed end to end: it passes your sessions on without being able to read them. Leave it out to keep Kiteline to your own Wi-Fi, or [use Tailscale](https://kiteline.seefun.dev/docs/#tailscale).
 
 To keep it running in the background, starting with your computer (Linux):
 
 ```bash
 npm install -g kiteline
-kiteline service install
+kiteline service install --relay
 ```
 
 Everything else is in the **[docs](https://kiteline.seefun.dev/docs/)**:
 
-- [Reach it from anywhere](https://kiteline.seefun.dev/docs/#anywhere), with Tailscale
+- [Reach it from anywhere](https://kiteline.seefun.dev/docs/#anywhere), and [what the relay sees](https://kiteline.seefun.dev/docs/#relay-privacy)
 - [Keep it running](https://kiteline.seefun.dev/docs/#always-on) all the time, even with the lid closed
 - [Approvals](https://kiteline.seefun.dev/docs/#approve) and [permission modes](https://kiteline.seefun.dev/docs/#modes)
 - [Configuration](https://kiteline.seefun.dev/docs/#config), [security](https://kiteline.seefun.dev/docs/#security) and [troubleshooting](https://kiteline.seefun.dev/docs/#troubleshooting)
 
 ## Good to know
 
-- **Treat the pairing link like a password.** Anyone who opens it can drive Claude Code on your computer. Don't open Kiteline's port to the internet; use Tailscale to reach it from elsewhere.
+- **Treat the pairing link like a password.** Anyone who opens it can drive Claude Code on your computer. Don't open Kiteline's port to the internet; use `--relay` or Tailscale to reach it from elsewhere.
 - **It uses Claude Code's own login,** your Claude plan or API key. Check that the way you use it fits your plan's terms.
 - **Tested on Linux so far.** Reports from real phones, macOS and Windows are very welcome.
 

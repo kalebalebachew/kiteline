@@ -61,7 +61,7 @@ export function HowItWorks() {
 	);
 }
 
-/** What `npx kiteline` prints, in the banner's colours. */
+/** What `npx kiteline --relay` prints, in the banner's colours. */
 export function BannerShot() {
 	return (
 		<div className="banner-shot">
@@ -71,23 +71,23 @@ export function BannerShot() {
 					<i />
 					<i />
 				</span>
-				<span>npx kiteline</span>
+				<span>npx kiteline --relay</span>
 			</div>
 			<div className="banner-shot__body">
 				<div>
-					<span className="t-dim">~</span> <span className="t-accent">❯</span> npx kiteline
+					<span className="t-dim">~</span> <span className="t-accent">❯</span> npx kiteline --relay
 				</div>
 				<div className="banner-shot__gap" />
 				<div>
 					{"  "}
 					<span className="t-accent">◆</span>
 					{"  "}
-					<b>Kiteline</b> <span className="t-dim">v0.1.0</span>
+					<b>Kiteline</b> <span className="t-dim">v0.2.0</span>
 				</div>
 				<div className="banner-shot__gap" />
 				<div>
 					{"  "}
-					<span className="t-dim">Network </span> http://192.168.1.20:4545
+					<span className="t-dim">Anywhere</span> https://relay.kiteline.seefun.dev
 				</div>
 				<div>
 					{"  "}
@@ -109,7 +109,7 @@ export function BannerShot() {
 				</svg>
 				<div>
 					{"  "}
-					<span className="t-accent">http://192.168.1.20:4545/#pair=Qm3xV8rT2kLp9ZwYb4NcHd7s</span>
+					<span className="t-accent">https://relay.kiteline.seefun.dev/#host=…&amp;pair=…</span>
 				</div>
 				<div>
 					{"  "}
