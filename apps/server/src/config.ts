@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 
+import { DEFAULT_RELAY } from "@kiteline/api/tunnel/relay-protocol";
+
 /**
  * Kiteline's settings, from environment variables (the `kiteline` command sets them from its flags).
  * Each has a default. Only a `.env` beside the server's own files is read, as in a clone of the repo:
@@ -18,6 +20,8 @@ export type Settings = {
 	allowBypass: boolean;
 	maxSessions: number;
 	idleMinutes: number;
+	/** The relay phones reach this computer through from anywhere, or null to keep to local networks. */
+	relay: string | null;
 };
 
 export class SettingsError extends Error {}
@@ -69,6 +73,14 @@ function address(name: string, what: string) {
 	);
 }
 
+/** on and off, or a relay of your own: KITELINE_RELAY=https://relay.example.com */
+function relay() {
+	const raw = text("KITELINE_RELAY");
+	if (raw === undefined || ["off", "false", "0", "no"].includes(raw.toLowerCase())) return null;
+	if (["on", "true", "1", "yes"].includes(raw.toLowerCase())) return DEFAULT_RELAY;
+	return address("KITELINE_RELAY", "The relay");
+}
+
 export function readSettings(): Settings {
 	loadOwnEnvFile();
 	return {
@@ -81,6 +93,7 @@ export function readSettings(): Settings {
 		allowBypass: yesNo("KITELINE_ALLOW_BYPASS", "Allowing Bypass mode", true),
 		maxSessions: whole("KITELINE_MAX_SESSIONS", "The session limit", 6, 1, 100),
 		idleMinutes: whole("KITELINE_IDLE_MINUTES", "The idle time", 20, 1, 7 * 24 * 60),
+		relay: relay() ?? null,
 	};
 }
 

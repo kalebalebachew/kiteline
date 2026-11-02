@@ -1,6 +1,6 @@
 {
 	"name": "kiteline",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Drive Claude Code on your computer from your phone.",
 	"license": "MIT",
 	"private": true,
@@ -20,7 +20,9 @@
 		"check": "biome check --write .",
 		"start": "pnpm --filter server start",
 		"pair": "pnpm --silent --filter server pair",
-		"release": "node scripts/release.mjs"
+		"release": "node scripts/release.mjs",
+		"deploy:relay": "./scripts/deploy-relay.sh",
+		"deploy:relay-env": "./scripts/push-relay-env.sh"
 	},
 	"dependencies": {
 		"zod": "catalog:"

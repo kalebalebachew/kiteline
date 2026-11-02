@@ -19,6 +19,7 @@ import { DEVICE_COOKIE, deviceSecret, kitelineHome, loadToken, PairLimiter, safe
 import { buildPairing, printAlreadyRunning, printBanner, printSettingsError, savePairing } from "./banner";
 import { readSettings, SettingsError } from "./config";
 import { createContext } from "./context";
+import { hostAddress, startRelay } from "./relay";
 
 const dev = process.argv.includes("--dev");
 let settings: ReturnType<typeof readSettings>;
@@ -40,6 +41,7 @@ const secret = deviceSecret(token);
 const pairing = buildPairing(dev ? 4546 : port, token, {
 	publicUrl: settings.publicUrl,
 	loopbackOnly: host === "127.0.0.1" || host === "localhost",
+	...(settings.relay ? { relay: { url: settings.relay, hostId: await hostAddress(home) } } : {}),
 });
 const limiter = new PairLimiter();
 
@@ -145,9 +147,22 @@ if (!dev && webDir) {
 	);
 }
 
+let relay: Awaited<ReturnType<typeof startRelay>> | null = null;
 const server = serve({ fetch: app.fetch, port, hostname: host }, () => {
-	printBanner(pairing, { version: pkg.version, dev });
+	printBanner(pairing, { version: pkg.version, dev, relay: settings.relay });
 	if (!dev) savePairing(home, pairing, pkg.version);
+	if (settings.relay) {
+		void startRelay({
+			relay: settings.relay,
+			home,
+			token,
+			version: pkg.version,
+			handle: (request) => app.fetch(request),
+			log: (message) => console.log(`  ${message}`),
+		}).then((started) => {
+			relay = started;
+		});
+	}
 });
 
 server.on("error", (error: NodeJS.ErrnoException) => {
@@ -157,6 +172,7 @@ server.on("error", (error: NodeJS.ErrnoException) => {
 });
 
 function shutdown() {
+	relay?.stop();
 	manager.stopAll();
 	server.close();
 	setTimeout(() => process.exit(0), 300).unref();

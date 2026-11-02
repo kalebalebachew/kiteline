@@ -5,6 +5,8 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { onRelay, relayFetch } from "./relay";
+
 export function isUnauthorized(error: unknown) {
 	return error instanceof ORPCError && error.code === "UNAUTHORIZED";
 }
@@ -32,7 +34,8 @@ export const queryClient = new QueryClient({
 
 export const link = new RPCLink({
 	url: `${window.location.origin}/rpc`,
-	fetch: (request, init) => fetch(request, { ...init, credentials: "same-origin" }),
+	// On the relay, the API is at the other end of the sealed tunnel; otherwise it's this server.
+	fetch: onRelay ? relayFetch : (request, init) => fetch(request, { ...init, credentials: "same-origin" }),
 });
 
 export const client: AppRouterClient = createORPCClient(link);

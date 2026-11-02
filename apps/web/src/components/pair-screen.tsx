@@ -3,17 +3,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { pair } from "@/lib/auth";
+import { onRelay } from "@/lib/relay";
 
 import { Wordmark } from "./brand";
 
 const STEPS = [
 	<>
 		On your computer, run{" "}
-		<code className="bg-surface-2 rounded-md px-1.5 py-0.5 font-mono text-[13px]">pnpm pair</code>.
+		<code className="bg-surface-2 rounded-md px-1.5 py-0.5 font-mono text-[13px]">kiteline pair</code>.
 	</>,
 	<>Scan the code with this phone's camera.</>,
 	<>Or paste the pairing link below.</>,
 ];
+
+/** Through the relay, a bare code can't say which computer; the link does. */
+const FIELD = onRelay ? "Pairing link" : "Pairing link or code";
 
 export function PairScreen({ initialError }: { initialError?: string | null }) {
 	const queryClient = useQueryClient();
@@ -62,13 +66,13 @@ export function PairScreen({ initialError }: { initialError?: string | null }) {
 
 				<form onSubmit={submit} className="mt-8 space-y-3">
 					<label htmlFor="pair" className="sr-only">
-						Pairing link or code
+						{FIELD}
 					</label>
 					<input
 						id="pair"
 						value={value}
 						onChange={(e) => setValue(e.target.value)}
-						placeholder="Pairing link or code"
+						placeholder={FIELD}
 						autoComplete="off"
 						autoCapitalize="off"
 						spellCheck={false}

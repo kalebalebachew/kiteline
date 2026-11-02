@@ -7,9 +7,10 @@ import { type ReactNode, useEffect, useState } from "react";
 import { PairScreen } from "@/components/pair-screen";
 import { Offline, Splash } from "@/components/splash";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
-import { initialPairToken, pair, useAuth } from "@/lib/auth";
+import { initialPairToken, pair, takePairToken, useAuth } from "@/lib/auth";
 import { setHome } from "@/lib/format";
 import { orpc } from "@/lib/orpc";
+import { TunnelError } from "@/lib/relay";
 
 import "../index.css";
 
@@ -50,6 +51,25 @@ function AuthGate({ children }: { children: ReactNode }) {
 	const [pairError, setPairError] = useState<string | null>(null);
 	const auth = useAuth();
 
+	// A pairing link opened in a tab that already shows Kiteline only changes the #: take it from there too.
+	useEffect(() => {
+		const onHash = () => {
+			const token = takePairToken();
+			if (!token) return;
+			setPairing(true);
+			setPairError(null);
+			void pair(token)
+				.then((result) => {
+					if (result.ok) void queryClient.invalidateQueries({ queryKey: ["auth"] });
+					else setPairError(result.error);
+				})
+				.catch(() => setPairError("Couldn't reach your computer to pair. Check that Kiteline is running."))
+				.finally(() => setPairing(false));
+		};
+		window.addEventListener("hashchange", onHash);
+		return () => window.removeEventListener("hashchange", onHash);
+	}, [queryClient]);
+
 	useEffect(() => {
 		const token = pendingToken;
 		if (!token) return;
@@ -65,9 +85,16 @@ function AuthGate({ children }: { children: ReactNode }) {
 
 	if (pairing || auth.isLoading) return <Splash />;
 	// Only when there's nothing to show: a failed background check mustn't wipe the page (and your draft).
-	if (auth.isError && !auth.data) return <Offline onRetry={() => void auth.refetch()} />;
+	if (auth.isError && !auth.data)
+		return <Offline onRetry={() => void auth.refetch()} reason={offlineReason(auth.error)} />;
 	if (!auth.data?.authed) return <PairScreen initialError={pairError} />;
 	return <HomeSync>{children}</HomeSync>;
+}
+
+/** Through the relay, the tunnel says exactly what's wrong; otherwise, the usual suspects. */
+function offlineReason(error: unknown) {
+	if (error instanceof TunnelError) return error.message;
+	return "Check that Kiteline is still running there, and that this phone can reach it: the same Wi-Fi, or Tailscale.";
 }
 
 /** Paths render as ~/… once the server has said where home is. */

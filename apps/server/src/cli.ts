@@ -22,12 +22,14 @@ const HELP = `
                                  127.0.0.1 keeps it to this computer, for Tailscale Serve
         --public-url <url>       The address your phone uses, like your Tailscale one;
                                  the pairing code points there
+        --relay                  Reach this computer from anywhere, through Kiteline's relay.
+                                 Sealed end to end: the relay passes your sessions on unread
         --new-token              Make a new pairing code, so every device pairs again
         --force                  With service install: replace a service set up by hand
     -v, --version                Show the version
     -h, --help                   Show this
 
-  The options also work as environment variables (PORT, HOST, KITELINE_PUBLIC_URL), and a few
+  The options also work as environment variables (PORT, HOST, KITELINE_PUBLIC_URL, KITELINE_RELAY), and a few
   more settings do too: ${accent("https://kiteline.seefun.dev/docs/#config")}
 `;
 
@@ -52,6 +54,7 @@ function parse() {
 			host: { type: "string" },
 			"public-url": { type: "string" },
 			"new-token": { type: "boolean" },
+			relay: { type: "boolean" },
 			force: { type: "boolean" },
 			help: { type: "boolean", short: "h" },
 			version: { type: "boolean", short: "v" },
@@ -92,6 +95,7 @@ if (values.help || positionals[0] === "help") {
 if (values.port !== undefined) process.env.PORT = values.port;
 if (values.host !== undefined) process.env.HOST = values.host;
 if (values["public-url"] !== undefined) process.env.KITELINE_PUBLIC_URL = values["public-url"];
+if (values.relay) process.env.KITELINE_RELAY ||= "on";
 startedFromCli();
 
 const [command, action, ...rest] = positionals;

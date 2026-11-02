@@ -26,12 +26,19 @@ export function reachableHosts(): string[] {
 export function buildPairing(
 	port: number,
 	token: string,
-	options: { publicUrl?: string; loopbackOnly: boolean },
+	options: { publicUrl?: string; loopbackOnly: boolean; relay?: { url: string; hostId: string } },
 ): Pairing {
 	const publicUrl = options.publicUrl?.replace(/\/+$/, "");
 	const lan = options.loopbackOnly ? [] : reachableHosts().map((host) => `http://${host}:${port}`);
-	const urls = [...(publicUrl ? [publicUrl] : []), ...lan, `http://localhost:${port}`];
-	const url = `${urls[0]}/#pair=${token}`;
+	const relay = options.relay?.url.replace(/\/+$/, "");
+	const urls = [
+		...(relay ? [relay] : []),
+		...(publicUrl ? [publicUrl] : []),
+		...lan,
+		`http://localhost:${port}`,
+	];
+	// Through the relay, the link says which computer as well as the code; it works on any network.
+	const url = relay ? `${relay}/#host=${options.relay?.hostId}&pair=${token}` : `${urls[0]}/#pair=${token}`;
 	return { url, urls, svg: renderSVG(url, { border: 1 }) };
 }
 
@@ -42,14 +49,22 @@ export const dim = paint("2", "22");
 export const bold = paint("1", "22");
 export const accent = paint("38;5;117", "39");
 
-export function printBanner(pairing: Pairing, options: { version: string; dev: boolean }) {
+export function printBanner(
+	pairing: Pairing,
+	options: { version: string; dev: boolean; relay?: string | null },
+) {
 	const lines = [
 		"",
 		`  ${accent("◆")}  ${bold("Kiteline")} ${dim(`v${options.version}`)}${options.dev ? dim("  (dev, web on :4546)") : ""}`,
 		"",
-		...pairing.urls.map(
-			(url, i) => `  ${dim(i === pairing.urls.length - 1 ? "Local   " : "Network ")} ${url}`,
-		),
+		...pairing.urls.map((url, i) => {
+			const label =
+				i === pairing.urls.length - 1 ? "Local   " : url === options.relay ? "Anywhere" : "Network ";
+			return `  ${dim(label)} ${url}`;
+		}),
+		...(options.relay
+			? ["", `  ${dim("Through the relay, sealed end to end: it passes your sessions on unread.")}`]
+			: []),
 		"",
 		`  ${bold("Pair your phone:")} scan this code, or open the link on it.`,
 		"",

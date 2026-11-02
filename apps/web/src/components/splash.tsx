@@ -10,13 +10,13 @@ export function Splash() {
 	);
 }
 
-export function Offline({ onRetry }: { onRetry: () => void }) {
+export function Offline({ onRetry, reason }: { onRetry: () => void; reason?: string }) {
 	return (
 		<div className="flex min-h-dvh flex-col items-center justify-center px-8 text-center">
 			<KiteMark className="text-faint size-10" />
 			<h1 className="mt-5 text-[20px] font-semibold tracking-[-0.02em]">Can't reach your computer</h1>
 			<p className="text-muted-foreground mt-1.5 max-w-xs text-[14px] leading-relaxed">
-				Check that Kiteline is still running there, and that Tailscale is on on this phone.
+				{reason ?? "Check that Kiteline is still running there, and that this phone can reach it."}
 			</p>
 			<Button variant="secondary" className="mt-6" onClick={onRetry}>
 				Try again

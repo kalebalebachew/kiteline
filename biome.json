@@ -11,6 +11,7 @@
 			"**",
 			"!**/.next",
 			"!**/dist",
+			"!release",
 			"!**/.turbo",
 			"!**/.nx",
 			"!**/dev-dist",
