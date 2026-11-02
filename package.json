@@ -1,6 +1,6 @@
 {
 	"name": "kiteline",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Drive Claude Code on your computer from your phone.",
 	"license": "MIT",
 	"private": true,

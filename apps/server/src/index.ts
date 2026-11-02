@@ -218,8 +218,13 @@ app.get("/auth/pair/:claim", async (c) => {
 	const status = await devices.status(c.req.param("claim"), wait, c.req.raw.signal);
 	if (!status) return c.json({ state: "gone" }, 404);
 	if (status.state !== "approved") return c.json(status);
-	// Through the relay the phone keeps its key itself; otherwise it's a cookie, out of the page's reach.
+	// Through the relay the phone keeps its key itself, and signs its old one out on its own.
 	if (tunnel) return c.json(status);
+	// Otherwise it's a cookie, out of the page's reach, in place of any this browser had: that old
+	// pairing goes, so the list doesn't keep a device nobody holds.
+	const previous = getCookie(c, DEVICE_COOKIE);
+	const before = previous ? devices.fromCookie(previous) : null;
+	if (before && before.id !== status.device.id) devices.remove(before.id, { kind: "device", ...before });
 	const https = c.req.header("x-forwarded-proto") === "https" || new URL(c.req.url).protocol === "https:";
 	setCookie(c, DEVICE_COOKIE, Devices.cookieFor(status.device), {
 		httpOnly: true,
@@ -326,7 +331,11 @@ if (!interactive) {
 		else if (r.state === "denied") log(`Declined ${r.name}.`);
 		else if (r.state === "expired") log(`Nobody answered ${r.name} in time; it isn't paired.`);
 	});
-	devices.on("removed", (device) => log(`Removed ${device.name}.`));
+	devices.on("removed", (device, by) =>
+		log(
+			`Removed ${device.name}${by.kind === "terminal" ? "" : by.id === device.id ? ", at its own request" : `, on ${by.name}`}.`,
+		),
+	);
 }
 
 const server = serve({ fetch: app.fetch, port, hostname: host }, () => {

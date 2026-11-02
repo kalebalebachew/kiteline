@@ -4,6 +4,7 @@ import { deviceName } from "./device-name";
 import {
 	computerState,
 	forgetComputer,
+	forgetOutdated,
 	onRelay,
 	pairingTunnel,
 	relayFetch,
@@ -221,23 +222,24 @@ export function useAuth() {
 		queryKey: ["auth"],
 		queryFn: async (): Promise<AuthState> => {
 			if (onRelay) {
-				const state = await computerState();
-				if (state === "none") return { authed: false };
-				if (state === "outdated") {
-					await forgetComputer();
-					return { authed: false, stale: true };
-				}
-				try {
-					const response = await relayFetch("/auth/status");
-					return (await response.json()) as AuthState;
-				} catch (error) {
-					// The computer doesn't know this phone any more: its key is no use, so pair again.
-					if (error instanceof TunnelError && error.problem === "unpaired") {
-						await forgetComputer();
+				let turnedAway = false;
+				for (let attempt = 0; attempt < 2; attempt++) {
+					const state = await computerState();
+					if (state === "none") return { authed: false, stale: turnedAway };
+					if (state === "outdated") {
+						await forgetOutdated();
 						return { authed: false, stale: true };
 					}
-					throw error;
+					try {
+						const response = await relayFetch("/auth/status");
+						return (await response.json()) as AuthState;
+					} catch (error) {
+						if (!(error instanceof TunnelError && error.problem === "unpaired")) throw error;
+						// Turned away, and that key forgotten, unless a fresh pairing replaced it: look again.
+						turnedAway = true;
+					}
 				}
+				return { authed: false, stale: true };
 			}
 			const response = await fetch("/auth/status", { credentials: "same-origin" });
 			if (!response.ok) throw new Error("Kiteline's server isn't answering.");

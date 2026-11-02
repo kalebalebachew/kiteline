@@ -16,15 +16,23 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
  */
 export async function pairCommand(): Promise<boolean> {
 	const { client } = await connectToKiteline();
-	const code = await client.devices.code();
-	printPairingCode(code);
+	// Listening for Ctrl C before the code exists, so stopping never leaves one working.
+	let interrupted = false;
+	let interrupt = () => {};
+	const onSignal = () => {
+		interrupted = true;
+		interrupt();
+	};
+	process.on("SIGINT", onSignal);
+	let code: Awaited<ReturnType<typeof client.devices.code>>;
+	try {
+		code = await client.devices.code();
+	} catch (error) {
+		process.off("SIGINT", onSignal);
+		throw error;
+	}
 
 	const interactive = !!process.stdin.isTTY && !!process.stdout.isTTY;
-	say(
-		dim(interactive ? "Waiting for a phone to use it. Ctrl C stops." : "Waiting for a phone to use it."),
-		"",
-	);
-
 	const watching = new AbortController();
 	let rl: Interface | null = null;
 	let question: AbortController | null = null;
@@ -46,17 +54,24 @@ export async function pairCommand(): Promise<boolean> {
 			resolve(paired);
 		};
 		// Stopped before anyone used it: the code goes with it, before this process does.
-		const onSignal = () => {
+		interrupt = () => {
 			console.log();
 			if (mine) return finish(false);
 			const cancelled = client.devices.cancelCode({ id: code.id }).catch(() => {});
 			const patience = new Promise((resolve) => setTimeout(resolve, 2000));
 			void Promise.race([cancelled, patience]).then(() => finish(false));
 		};
-		process.on("SIGINT", onSignal);
 		let deadline = setTimeout(
 			() => finish(false, `Nobody used the code in time. Run ${bold(command("pair"))} for a new one.`),
 			code.expiresAt - Date.now() + 1000,
+		);
+		// Ctrl C while the code was being made: it goes before it was ever shown.
+		if (interrupted) return interrupt();
+
+		printPairingCode(code);
+		say(
+			dim(interactive ? "Waiting for a phone to use it. Ctrl C stops." : "Waiting for a phone to use it."),
+			"",
 		);
 
 		const ask = async (request: PairRequestInfo) => {

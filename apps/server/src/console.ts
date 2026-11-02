@@ -78,7 +78,9 @@ export function startConsole({ devices, pairingLink }: Options) {
 	});
 
 	devices.on("removed", (device, by) => {
-		say(`Removed ${device.name}${by.kind === "device" && by.id !== device.id ? `, on ${by.name}` : ""}.`, "");
+		const how =
+			by.kind === "terminal" ? "" : by.id === device.id ? ", at its own request" : `, on ${by.name}`;
+		say(`Removed ${device.name}${how}.`, "");
 	});
 
 	rl.on("line", (line) => {

@@ -121,6 +121,7 @@ export function Content() {
 						removing one cuts it off at once: <a href="#devices">see and remove devices</a>.
 					</li>
 					<li>When a device is paired, every other paired device hears about it.</li>
+					<li>Pairing a device again replaces its old pairing, which leaves the list.</li>
 					<li>
 						Pairing belongs to the address you opened. If you paired over Wi-Fi and later open your Tailscale
 						address, pair once more there.
