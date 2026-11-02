@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * `pnpm release`: builds the npm package into release/kiteline, packs it beside it, and lists what's in
- * it. Publishing is a separate, deliberate step: `npm publish release/kiteline`.
+ * it. Publishing is a separate, deliberate step: `npm publish ./release/kiteline`.
  *
  * It builds into its own folder, so the app's own build (and a Kiteline running from it) is left alone.
  */
@@ -79,4 +79,4 @@ if (!existsSync(join(out, "dist", "cli.mjs")) || !existsSync(join(out, "dist", "
 	throw new Error("The build is missing the command or the web app.");
 }
 run("npm", ["pack", "--pack-destination", release], out);
-console.log(`\n  Built release/kiteline ${pkg.version}. Publish it with: npm publish release/kiteline\n`);
+console.log(`\n  Built release/kiteline ${pkg.version}. Publish it with: npm publish ./release/kiteline\n`);
