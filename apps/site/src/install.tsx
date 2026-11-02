@@ -12,8 +12,6 @@ import { QR_PATH, QR_SIZE } from "./qr";
 
 import "./install.css";
 
-const REPO = "https://github.com/sifenfisaha/kiteline";
-
 function CopyCode({ code }: { code: string }) {
 	const [copied, setCopied] = useState(false);
 	return (
@@ -39,7 +37,7 @@ function CopyCode({ code }: { code: string }) {
 
 const at = (seconds: number) => ({ "--d": `${seconds}s` }) as CSSProperties;
 
-/** What `pnpm start` prints, in the banner's own colors, cropped below the pairing link. */
+/** What `npx kiteline` prints, in the banner's own colors, cropped below the pairing link. */
 function Terminal() {
 	const ref = useRef<HTMLDivElement>(null);
 	const motion = usePlayOnce(ref);
@@ -55,7 +53,7 @@ function Terminal() {
 			<div
 				className="term"
 				role="img"
-				aria-label="The terminal after pnpm start: Kiteline's addresses and a QR code to pair your phone"
+				aria-label="The terminal after npx kiteline: Kiteline's addresses and a QR code to pair your phone"
 			>
 				<div className="term__bar">
 					<span className="term__lights">
@@ -63,12 +61,12 @@ function Terminal() {
 						<i />
 						<i />
 					</span>
-					<span className="term__title">kiteline — pnpm start</span>
+					<span className="term__title">npx kiteline</span>
 				</div>
 				<div className="term__body">
 					<div className="term__line">
-						<span className="t-dim">~/kiteline</span> <span className="t-accent">❯</span>{" "}
-						<span className="term__typed">pnpm start</span>
+						<span className="t-dim">~</span> <span className="t-accent">❯</span>{" "}
+						<span className="term__typed">npx kiteline</span>
 					</div>
 					<div className="term__gap" />
 					<div className="term__line out" style={at(0.95)}>
@@ -117,8 +115,8 @@ export function Install() {
 	return (
 		<section className="setup" id="install">
 			<h2 className="statement">
-				Set it up in a few minutes.{" "}
-				<span>You need Node.js 22.18 or newer, pnpm, and Claude Code signed in on the computer.</span>
+				Set it up with one command.{" "}
+				<span>You need Node.js 22.18 or newer, and Claude Code signed in on the computer.</span>
 			</h2>
 
 			<div className="setup__grid">
@@ -126,24 +124,17 @@ export function Install() {
 					<li className="setup-step">
 						<span className="setup-step__n">1</span>
 						<div className="setup-step__body">
-							<h3>Clone it and build</h3>
-							<CopyCode code={`git clone ${REPO}.git\ncd kiteline\npnpm install && pnpm build`} />
+							<h3>Run it on the computer where you use Claude Code</h3>
+							<CopyCode code="npx kiteline" />
 						</div>
 					</li>
 					<li className="setup-step">
 						<span className="setup-step__n">2</span>
 						<div className="setup-step__body">
-							<h3>Start it on the computer where you use Claude Code</h3>
-							<CopyCode code="pnpm start" />
-						</div>
-					</li>
-					<li className="setup-step">
-						<span className="setup-step__n">3</span>
-						<div className="setup-step__body">
 							<h3>Scan the code with your phone</h3>
 							<p>
 								Kiteline opens already paired, and stays paired. To show the code again later, run{" "}
-								<code>pnpm pair</code>.
+								<code>npx kiteline pair</code>.
 							</p>
 						</div>
 					</li>
@@ -168,7 +159,7 @@ export function Install() {
 					</span>
 					<span className="next-card__text">
 						<strong>Keep it running</strong>
-						<span>Run it as a service that starts at boot and keeps going with the lid closed.</span>
+						<span>One command makes it a service that starts at boot and keeps going.</span>
 					</span>
 					<ArrowRightIcon weight="bold" className="next-card__arrow" />
 				</a>

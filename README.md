@@ -24,16 +24,20 @@ It's self-hosted: your phone talks straight to your computer, and Claude Code ke
 
 ## Quick start
 
-You need Node.js 22.18 or newer, pnpm, and Claude Code signed in on the computer.
+You need Node.js 22.18 or newer, and Claude Code signed in on the computer.
 
 ```bash
-git clone https://github.com/sifenfisaha/kiteline.git && cd kiteline
-pnpm install
-pnpm build
-pnpm start
+npx kiteline
 ```
 
 Scan the QR code it prints with your phone's camera, and you're in.
+
+To keep it running in the background, starting with your computer (Linux):
+
+```bash
+npm install -g kiteline
+kiteline service install
+```
 
 Everything else is in the **[docs](https://kiteline.seefun.dev/docs/)**:
 
@@ -51,8 +55,11 @@ Everything else is in the **[docs](https://kiteline.seefun.dev/docs/)**:
 ## Contributing
 
 ```bash
-pnpm dev     # the server, the app and the website, reloading as you edit
-pnpm check   # lint and format
+git clone https://github.com/sifenfisaha/kiteline.git && cd kiteline
+pnpm install
+pnpm dev       # the server, the app and the website, reloading as you edit
+pnpm check     # lint and format
+pnpm release   # build the npm package into release/
 ```
 
 Issues and pull requests are welcome.

@@ -61,7 +61,7 @@ export function HowItWorks() {
 	);
 }
 
-/** What `pnpm start` prints, in the banner's colours. */
+/** What `npx kiteline` prints, in the banner's colours. */
 export function BannerShot() {
 	return (
 		<div className="banner-shot">
@@ -71,11 +71,11 @@ export function BannerShot() {
 					<i />
 					<i />
 				</span>
-				<span>kiteline — pnpm start</span>
+				<span>npx kiteline</span>
 			</div>
 			<div className="banner-shot__body">
 				<div>
-					<span className="t-dim">~/kiteline</span> <span className="t-accent">❯</span> pnpm start
+					<span className="t-dim">~</span> <span className="t-accent">❯</span> npx kiteline
 				</div>
 				<div className="banner-shot__gap" />
 				<div>

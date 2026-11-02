@@ -43,8 +43,8 @@ export function Content() {
 						<code>claude</code> in a terminal once and sign in.
 					</li>
 					<li>
-						<strong>Node.js 22.18 or newer, and pnpm.</strong> Check with <code>node --version</code>; pnpm
-						installs with <code>npm install -g pnpm</code>.
+						<strong>Node.js 22.18 or newer.</strong> Check with <code>node --version</code>, and get it from{" "}
+						<a href="https://nodejs.org">nodejs.org</a> if you need to.
 					</li>
 					<li>
 						<strong>A phone with a modern browser,</strong> on the same Wi-Fi as the computer. To use it from
@@ -57,26 +57,26 @@ export function Content() {
 				</Callout>
 			</Section>
 
-			<Section id="install" title="Install" lead="Four commands on the computer that runs Claude Code.">
-				<Steps>
-					<Step title="Get the code">
-						<Code code={`git clone ${REPO}.git\ncd kiteline`} />
-					</Step>
-					<Step title="Install and build">
-						<Code code={"pnpm install\npnpm build"} />
-					</Step>
-					<Step title="Start it">
-						<Code code="pnpm start" />
-						<p>
-							It prints the addresses your phone can use and a QR code. Leave it running while you use
-							Kiteline.
-						</p>
-					</Step>
-				</Steps>
+			<Section id="install" title="Install" lead="One command, on the computer that runs Claude Code.">
+				<Code code="npx kiteline" />
+				<p>
+					It starts Kiteline and prints the addresses your phone can use, with a QR code to pair it. Leave it
+					running while you use Kiteline. The first time takes a little longer: Kiteline brings its own copy
+					of Claude Code's engine, about 150 MB.
+				</p>
+				<H3 id="install-for-good">Install it for good</H3>
+				<p>
+					npx keeps its copy only until it tidies up. To have the <code>kiteline</code> command whenever you
+					want it, install it:
+				</p>
+				<Code code={"npm install -g kiteline\nkiteline"} />
 				<Callout tone="tip">
-					Want it to start by itself and keep going after you close the terminal? Set it up once as a
-					background service: <a href="#always-on">Keep it running</a>.
+					Want it to start by itself and keep going after you close the terminal? That's one more command:{" "}
+					<a href="#always-on">Keep it running</a>.
 				</Callout>
+				<H3 id="from-source">From source</H3>
+				<p>To work on Kiteline itself, run it from a clone of the repository. You'll need pnpm too.</p>
+				<Code code={`git clone ${REPO}.git\ncd kiteline\npnpm install\npnpm build\npnpm start`} />
 			</Section>
 
 			<Section
@@ -84,7 +84,7 @@ export function Content() {
 				title="Pair your phone"
 				lead="Pairing tells Kiteline this phone is yours. You do it once per phone."
 			>
-				<Figure alt="The terminal after pnpm start: Kiteline's addresses, a QR code, and the pairing link.">
+				<Figure alt="The terminal after npx kiteline: Kiteline's addresses, a QR code, and the pairing link.">
 					<BannerShot />
 				</Figure>
 				<Steps>
@@ -102,8 +102,9 @@ export function Content() {
 					</Step>
 					<Step title="Need the code again later?">
 						<p>
-							Run <code>pnpm pair</code>: it shows the code without starting a second copy of Kiteline. On a
-							phone that's already paired, Settings → "Pair another device" shows it too.
+							Run <code>kiteline pair</code> (or <code>npx kiteline pair</code>): it shows the code without
+							starting a second copy of Kiteline. On a phone that's already paired, Settings → "Pair another
+							device" shows it too.
 						</p>
 					</Step>
 				</Steps>
@@ -470,21 +471,19 @@ export function Content() {
 						</p>
 					</Step>
 					<Step title="Point the pairing code at it">
+						<p>Tell Kiteline its new address, so the QR code opens it. Start it with:</p>
+						<Code code={"npx kiteline \\\n  --public-url https://your-computer.your-network.ts.net"} />
 						<p>
-							Tell Kiteline its new address, so the QR code opens it. Add this line to{" "}
-							<code>apps/server/.env</code> (or to your service file), then restart Kiteline:
+							Running it in the background? Give the same option to{" "}
+							<a href="#always-on">kiteline service install</a> instead.
 						</p>
-						<Code
-							label="apps/server/.env"
-							code="KITELINE_PUBLIC_URL=https://your-computer.your-network.ts.net"
-						/>
 					</Step>
 					<Step title="Pair once more on the new address">
 						<p>Scan the new code with Tailscale on. Now Kiteline works wherever your phone has signal.</p>
 					</Step>
 				</Steps>
 				<Callout tone="tip">
-					With Tailscale in front, also set <code>HOST=127.0.0.1</code>: Kiteline then answers only through
+					With Tailscale in front, also add <code>--host 127.0.0.1</code>: Kiteline then answers only through
 					Tailscale, and not to other devices on your Wi-Fi.
 				</Callout>
 				<Callout tone="warn">
@@ -495,50 +494,47 @@ export function Content() {
 			<Section
 				id="always-on"
 				title="Keep it running"
-				lead="On Linux, run Kiteline as a background service: it starts when the computer does, restarts if it crashes, and keeps going after you log out."
+				lead="On Linux, Kiteline can run as a background service: it starts when the computer does, restarts if it stops, and keeps going after you log out."
 			>
 				<Steps>
-					<Step title="Copy the service file">
-						<Code
-							code={"mkdir -p ~/.config/systemd/user\ncp docs/kiteline.service ~/.config/systemd/user/"}
-						/>
+					<Step title="Install it">
+						<p>The service needs a copy of Kiteline that stays put, so not npx's:</p>
+						<Code code="npm install -g kiteline" />
 					</Step>
-					<Step title="Fill in your details">
-						<p>
-							Open <code>~/.config/systemd/user/kiteline.service</code> and set:
-						</p>
-						<ul>
-							<li>
-								<code>WorkingDirectory</code>: where you cloned Kiteline (<code>%h</code> is your home
-								folder);
-							</li>
-							<li>
-								<code>ExecStart</code>: the path to Node, from <code>which node</code>;
-							</li>
-							<li>
-								<code>KITELINE_PUBLIC_URL</code>: your <a href="#anywhere">Tailscale address</a>;
-							</li>
-							<li>
-								<code>PATH</code>: the useful parts of <code>echo $PATH</code>, so commands Claude Code runs
-								find your tools.
-							</li>
-						</ul>
-						<p>
-							The template listens on <code>127.0.0.1</code>, for use with Tailscale. Delete its{" "}
-							<code>HOST</code> line to reach Kiteline over Wi-Fi as well.
-						</p>
-					</Step>
-					<Step title="Switch it on">
+					<Step title="Set up the service">
+						<Code code="kiteline service install" />
+						<p>Using Tailscale? Give it your address, and keep Kiteline to it:</p>
 						<Code
 							code={
-								'systemctl --user daemon-reload\nsystemctl --user enable --now kiteline\nloginctl enable-linger "$USER"   # start at boot, before you log in'
+								"kiteline service install \\\n  --host 127.0.0.1 \\\n  --public-url https://your-computer.your-network.ts.net"
 							}
 						/>
+						<p>
+							It writes the service for this computer, with the folders your terminal finds programs in, so
+							the commands Claude Code runs work as they do for you. It makes sure the service also starts at
+							boot, before you log in, and tells you the one command to run if that needs your password. Then
+							it starts Kiteline and shows the pairing code.
+						</p>
 					</Step>
 				</Steps>
+				<Table
+					head={["To", "Run"]}
+					rows={[
+						["See what it's doing", <code key="c">journalctl --user -u kiteline -f</code>],
+						["Show the pairing code", <code key="c">kiteline pair</code>],
+						["Change its settings", <code key="c">kiteline service install --port 4546</code>],
+						["Check on it", <code key="c">kiteline service</code>],
+						["Stop running it", <code key="c">kiteline service uninstall</code>],
+					]}
+				/>
+				<Callout tone="note">
+					It works with systemd, which most Linux computers use. On a Mac or on Windows, keep{" "}
+					<code>kiteline</code> running in a terminal for now.
+				</Callout>
 				<p>
-					To see what it's doing, run <code>journalctl --user -u kiteline -f</code>. To show the pairing code
-					while it runs in the background, run <code>pnpm pair</code>.
+					Set a service up by hand, as earlier versions of these docs had you do?{" "}
+					<code>kiteline service install --force</code> replaces it, and keeps your file beside it as{" "}
+					<code>kiteline.service.bak</code>.
 				</p>
 				<H3 id="laptops">On a laptop</H3>
 				<p>A laptop also has to stay awake. To keep it running with the lid closed while it's plugged in:</p>
@@ -550,23 +546,29 @@ export function Content() {
 				<p>On battery, closing the lid still puts it to sleep.</p>
 			</Section>
 
-			<Section id="update" title="Update" lead="Pull the latest version, build it, and restart.">
+			<Section id="update" title="Update" lead="Install the latest version, then restart.">
 				<Code
 					code={
-						"cd kiteline\ngit pull\npnpm install\npnpm build\nsystemctl --user restart kiteline   # if it runs as a service"
+						"npm install -g kiteline@latest\nsystemctl --user restart kiteline   # if it runs in the background"
 					}
 				/>
 				<p>
-					Restarting stops running sessions; each one continues when you send it a message. Your phone picks
-					up the new version by itself.
+					With npx, <code>npx kiteline@latest</code> runs the newest. Restarting stops running sessions; each
+					one continues when you send it a message. Your phone picks up the new version by itself.
 				</p>
 			</Section>
 
 			<Section
 				id="config"
 				title="Configuration"
-				lead="Everything has a sensible default. To change something, set it as an environment variable, or put it in apps/server/.env."
+				lead="Everything has a sensible default. Change a setting with an option when you start Kiteline, or with an environment variable."
 			>
+				<Code code="kiteline --port 4546 --host 127.0.0.1" />
+				<p>
+					The first three have options: <code>--port</code>, <code>--host</code> and <code>--public-url</code>
+					. Every setting also works as an environment variable, as in <code>PORT=4546 kiteline</code>.{" "}
+					<code>kiteline --help</code> lists what it takes.
+				</p>
 				<Table
 					head={["Setting", "Default", "What it does"]}
 					rows={[
@@ -614,13 +616,10 @@ export function Content() {
 						],
 					]}
 				/>
-				<Code
-					label="apps/server/.env"
-					code={"PORT=4545\nHOST=127.0.0.1\nKITELINE_PUBLIC_URL=https://your-computer.your-network.ts.net"}
-				/>
 				<p>
-					<code>pnpm pair</code> doesn't read this file: if you moved <code>KITELINE_HOME</code>, set it in
-					your terminal for <code>pnpm pair</code> too.
+					The background service keeps the settings it was set up with; run{" "}
+					<code>kiteline service install</code> again with new ones to change them. Running from a clone,{" "}
+					<code>apps/server/.env</code> works as well.
 				</p>
 			</Section>
 
@@ -655,7 +654,7 @@ export function Content() {
 				</p>
 				<Code
 					code={
-						"systemctl --user stop kiteline     # if it runs as a service\npnpm start -- --new-token          # then stop it with Ctrl C\nsystemctl --user start kiteline"
+						"systemctl --user stop kiteline     # if it runs in the background\nkiteline --new-token               # then stop it with Ctrl C\nsystemctl --user start kiteline"
 					}
 				/>
 				<p>
@@ -696,26 +695,26 @@ export function Content() {
 				<Details id="port-in-use" summary="“Kiteline didn't start: port 4545 is already in use”">
 					<p>
 						Kiteline is probably already running, as the background service. There's nothing to start: show
-						the pairing code with <code>pnpm pair</code>. If something else has the port, set{" "}
-						<code>PORT</code> to another number.
+						the pairing code with <code>kiteline pair</code>. If something else has the port, start Kiteline
+						on another one with <code>--port 4546</code>.
 					</p>
 				</Details>
 				<Details id="pair-again" summary="My phone shows “Pair this phone” again">
 					<p>
 						Pairing belongs to the address you opened, so a new address (say, your Tailscale one) needs one
 						more scan. It also happens after "Unpair this device", after a new pairing code, or after 400
-						days. Scan the code again; <code>pnpm pair</code> shows it.
+						days. Scan the code again; <code>kiteline pair</code> shows it.
 					</p>
 				</Details>
 				<Details id="code-mismatch" summary="“That code doesn't match”">
 					<p>
 						The link was cut short, or it's from before a new pairing code was made. Copy the link from{" "}
-						<code>pnpm pair</code> again.
+						<code>kiteline pair</code> again.
 					</p>
 				</Details>
 				<Details id="too-many" summary="“Too many wrong codes”">
 					<p>
-						Wait ten minutes, then pair with a fresh link from <code>pnpm pair</code>.
+						Wait ten minutes, then pair with a fresh link from <code>kiteline pair</code>.
 					</p>
 				</Details>
 				<Details id="no-install" summary="There's no “Add to Home Screen” or “Install app”">
@@ -736,15 +735,23 @@ export function Content() {
 						(or run <code>/login</code>), then send your message again.
 					</p>
 				</Details>
-				<Details id="build-fails" summary="pnpm install or pnpm build fails">
+				<Details id="install-fails" summary="npx kiteline or npm install fails">
 					<p>
-						Check <code>node --version</code>: Kiteline needs Node.js 22.18 or newer. Update Node, then run{" "}
-						<code>pnpm install</code> and <code>pnpm build</code> again.
+						Check <code>node --version</code>: Kiteline needs Node.js 22.18 or newer. Update Node, then try
+						again. The first install also downloads Claude Code's engine, about 150 MB, so a slow or dropped
+						connection can stop it part way; running it again picks up where it left off.
 					</p>
 				</Details>
-				<Details id="pair-not-run" summary="pnpm pair says Kiteline hasn't run yet">
+				<Details id="not-found" summary="“kiteline: command not found”">
 					<p>
-						Start it once with <code>pnpm start</code> (or as a service); <code>pnpm pair</code> shows the
+						It isn't installed yet, or npm's folder for commands isn't on your PATH. Run it with{" "}
+						<code>npx kiteline</code>, or install it with <code>npm install -g kiteline</code> and open a new
+						terminal.
+					</p>
+				</Details>
+				<Details id="pair-not-run" summary="kiteline pair says Kiteline hasn't run yet">
+					<p>
+						Start it once with <code>kiteline</code> (or as a service); <code>kiteline pair</code> shows the
 						code of the last time it started.
 					</p>
 				</Details>
