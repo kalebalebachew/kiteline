@@ -4,6 +4,8 @@ import { join } from "node:path";
 import type { Pairing } from "@kiteline/api/context";
 import { renderSVG, renderUnicodeCompact } from "uqr";
 
+import { command, otherPortHint } from "./config";
+
 /** LAN and tailnet addresses first, so the QR code points somewhere a phone can reach. */
 export function reachableHosts(): string[] {
 	const hosts: string[] = [];
@@ -33,9 +35,12 @@ export function buildPairing(
 	return { url, urls, svg: renderSVG(url, { border: 1 }) };
 }
 
-const dim = (s: string) => `\x1b[2m${s}\x1b[22m`;
-const bold = (s: string) => `\x1b[1m${s}\x1b[22m`;
-const accent = (s: string) => `\x1b[38;5;117m${s}\x1b[39m`;
+// Color only for a person at a terminal: a service's log or a pipe gets plain text.
+const color = !!process.stdout.isTTY && !process.env.NO_COLOR;
+const paint = (open: string, close: string) => (s: string) => (color ? `\x1b[${open}m${s}\x1b[${close}m` : s);
+export const dim = paint("2", "22");
+export const bold = paint("1", "22");
+export const accent = paint("38;5;117", "39");
 
 export function printBanner(pairing: Pairing, options: { version: string; dev: boolean }) {
 	const lines = [
@@ -53,7 +58,7 @@ export function printBanner(pairing: Pairing, options: { version: string; dev: b
 			.map((row) => `  ${row}`),
 		"",
 		`  ${accent(pairing.url)}`,
-		`  ${dim("Keep this link private. Run with --new-token to unpair every device.")}`,
+		`  ${dim("Keep this link private. Start with --new-token to unpair every device.")}`,
 		"",
 	];
 	console.log(lines.join("\n"));
@@ -86,10 +91,14 @@ export function printAlreadyRunning(port: number) {
 			"  If Kiteline is already running, for example as the background service,",
 			"  there's nothing to start. Show the pairing code with:",
 			"",
-			`    ${accent("pnpm pair")}`,
+			`    ${accent(command("pair"))}`,
 			"",
-			dim("  Otherwise another program has the port; set PORT to use a different one."),
+			dim(`  Otherwise another program has the port; ${otherPortHint()}.`),
 			"",
 		].join("\n"),
 	);
+}
+
+export function printSettingsError(message: string) {
+	console.error(["", `  ${accent("◆")}  ${bold("Kiteline didn't start:")} ${message}`, ""].join("\n"));
 }

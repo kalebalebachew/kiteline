@@ -16,32 +16,38 @@ import { logger } from "hono/logger";
 
 import pkg from "../package.json" with { type: "json" };
 import { DEVICE_COOKIE, deviceSecret, kitelineHome, loadToken, PairLimiter, safeEqual } from "./auth";
-import { buildPairing, printAlreadyRunning, printBanner, savePairing } from "./banner";
+import { buildPairing, printAlreadyRunning, printBanner, printSettingsError, savePairing } from "./banner";
+import { readSettings, SettingsError } from "./config";
 import { createContext } from "./context";
-import { ENV } from "./env.server";
 
 const dev = process.argv.includes("--dev");
-const port = ENV.PORT ?? 4545;
-const host = ENV.HOST || "0.0.0.0";
-const allowBypass = ENV.KITELINE_ALLOW_BYPASS ?? true;
+let settings: ReturnType<typeof readSettings>;
+try {
+	settings = readSettings();
+} catch (error) {
+	if (!(error instanceof SettingsError)) throw error;
+	printSettingsError(error.message);
+	process.exit(1);
+}
+const { port, host, allowBypass } = settings;
 
-const home = kitelineHome(ENV.KITELINE_HOME);
+const home = kitelineHome(settings.home);
 const token = loadToken(home, {
-	fixed: ENV.KITELINE_TOKEN,
+	fixed: settings.token,
 	rotate: process.argv.includes("--new-token"),
 });
 const secret = deviceSecret(token);
 const pairing = buildPairing(dev ? 4546 : port, token, {
-	publicUrl: ENV.KITELINE_PUBLIC_URL,
+	publicUrl: settings.publicUrl,
 	loopbackOnly: host === "127.0.0.1" || host === "localhost",
 });
 const limiter = new PairLimiter();
 
 const manager = new RunManager({
-	claudePath: ENV.CLAUDE_PATH || null,
+	claudePath: settings.claudePath ?? null,
 	allowBypass,
-	maxLiveRuns: ENV.KITELINE_MAX_SESSIONS ?? 6,
-	idleTimeoutMs: (ENV.KITELINE_IDLE_MINUTES ?? 20) * 60_000,
+	maxLiveRuns: settings.maxSessions,
+	idleTimeoutMs: settings.idleMinutes * 60_000,
 	tracker: new SessionTracker(join(home, "sessions.json")),
 });
 
@@ -108,10 +114,14 @@ app.use("/rpc/*", async (c, next) => {
 	await next();
 });
 
-// After `pnpm build`, the server also hosts the web app, so one port does everything.
-const webDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../web/dist");
-const indexFile = join(webDir, "index.html");
-if (!dev && existsSync(indexFile)) {
+// The server also hosts the web app, so one port does everything: from `web/` beside it in the npm
+// package, or from the web app's own build in a clone of the repo.
+const here = dirname(fileURLToPath(import.meta.url));
+const webDir = [join(here, "web"), resolve(here, "../../web/dist")].find((dir) =>
+	existsSync(join(dir, "index.html")),
+);
+const indexFile = webDir ? join(webDir, "index.html") : "";
+if (!dev && webDir) {
 	const indexHtml = readFileSync(indexFile, "utf8");
 	app.use(
 		"/*",
