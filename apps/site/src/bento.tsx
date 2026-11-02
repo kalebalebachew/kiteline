@@ -285,7 +285,7 @@ function Topology() {
 			<div className="link">
 				<span className="link__label">
 					<LockSimpleIcon weight="fill" />
-					Your Wi-Fi or Tailscale
+					Relay, Wi-Fi or Tailscale
 				</span>
 			</div>
 			<div className="machine">
@@ -375,7 +375,8 @@ export function Features() {
 					copy={
 						<>
 							<strong>Stays on your computer.</strong> Claude Code runs where your files are, with your
-							settings and your login. Your phone talks to it directly; nothing is relayed.
+							settings and your login. Your phone reaches it through the relay, sealed end to end, or over
+							your Wi-Fi or Tailscale, and a new device gets in only once you allow it.
 						</>
 					}
 				>
