@@ -703,6 +703,25 @@ html.docs-locked {
 	background: var(--ink);
 	color: #fff;
 }
+
+/* npm, pnpm or bun, in a code block's caption. */
+.doc-code__pm {
+	display: flex;
+	gap: 2px;
+	margin-left: -10px;
+}
+.doc-code .doc-code__pm button {
+	height: 26px;
+	padding: 0 9px;
+	font-size: 12.5px;
+}
+.doc-code .doc-code__pm button[aria-selected="true"] {
+	background: #fff;
+	color: var(--ink);
+	box-shadow:
+		0 0 0 1px var(--line),
+		0 1px 2px rgba(15, 23, 42, 0.05);
+}
 .doc-tabs__panel .doc-steps {
 	margin-bottom: 12px;
 }

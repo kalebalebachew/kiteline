@@ -10,7 +10,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { homedir, userInfo } from "node:os";
-import { delimiter, dirname, join } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 
 import { kitelineHome, localAddress } from "./auth";
 import { accent, bold, dim } from "./banner";
@@ -89,7 +89,33 @@ function shellPath() {
 	return [...new Set(kept)].join(delimiter) || "/usr/local/bin:/usr/bin:/bin";
 }
 
-export function unitText(node: string, script: string) {
+/** One-off runners keep their copy only for a while; each one's own way to install it for good. */
+const RUNNERS = [
+	{ pattern: /[\\/]_npx[\\/]/, name: "npx", install: "npm install -g kiteline" },
+	{ pattern: /[\\/]dlx[\\/]/, name: "pnpm dlx", install: "pnpm add -g kiteline" },
+	{ pattern: /[\\/]bunx-/, name: "bunx", install: "bun add -g kiteline" },
+];
+
+/**
+ * What the service runs. npm and bun install Kiteline at a path that stays put across updates, so the
+ * service runs that file with this Node. pnpm keeps each global install in a folder of its own and
+ * points its `kiteline` command at the current one, so there the service runs that command, which
+ * still finds Kiteline after an update.
+ */
+export function launcher(script: string, node: string): string[] {
+	const given = resolve(script);
+	const real = realpathSync(given);
+	const pnpmHome = /^(.*?)[\\/]global[\\/]v?\d+[\\/]/.exec(given)?.[1];
+	if (pnpmHome && /[\\/]\.pnpm[\\/]/.test(real)) {
+		const command = [join(pnpmHome, "bin", "kiteline"), join(pnpmHome, "kiteline")].find((shim) =>
+			existsSync(shim),
+		);
+		if (command) return [command];
+	}
+	return [node, real];
+}
+
+export function unitText(command: string[]) {
 	const settings = KEPT.flatMap((key) => {
 		const value = process.env[key]?.trim();
 		return value ? [`Environment=${quote(`${key}=${value}`)}`] : [];
@@ -103,7 +129,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=${quote(node, { command: true })} ${quote(script, { command: true })}
+ExecStart=${command.map((part) => quote(part, { command: true })).join(" ")}
 ${settings.length ? `${settings.join("\n")}\n` : ""}# Claude Code's Bash tool runs with this shell and finds tools in these folders, as in your terminal.
 Environment=${quote(`SHELL=${process.env.SHELL || "/bin/sh"}`)}
 Environment=${quote(`PATH=${shellPath()}`)}
@@ -128,13 +154,15 @@ async function install({ force }: { force: boolean }) {
 	requireSystemd();
 
 	// npx and friends run a copy they may clear out later; a service needs one that stays.
-	const script = realpathSync(process.argv[1] ?? "");
-	if (/[\\/]_npx[\\/]|[\\/]dlx[\\/]|[\\/]bunx-/.test(script)) {
+	const script = process.argv[1] ?? "";
+	const real = realpathSync(script);
+	const runner = RUNNERS.find(({ pattern }) => pattern.test(real) || pattern.test(script));
+	if (runner) {
 		fail(
-			"This copy of Kiteline came from npx, which may clear it out later, and a service needs one that stays.",
+			`This copy of Kiteline came from ${runner.name}, which may clear it out later, and a service needs one that stays.`,
 			"Install it, then set up the service with that copy:",
 			"",
-			`  ${accent("npm install -g kiteline")}`,
+			`  ${accent(runner.install)}`,
 			`  ${accent("kiteline service install")}`,
 		);
 	}
@@ -168,7 +196,7 @@ async function install({ force }: { force: boolean }) {
 
 	mkdirSync(dirname(file), { recursive: true });
 	if (existing !== null && !existing.includes(MARK)) copyFileSync(file, `${file}.bak`);
-	writeFileSync(file, unitText(process.execPath, script));
+	writeFileSync(file, unitText(launcher(script, process.execPath)));
 
 	// The service says where it answers when it starts; a fresh note means this start's is up.
 	const serverFile = join(kitelineHome(settings.home), "server.json");

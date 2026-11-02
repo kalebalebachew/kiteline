@@ -7,7 +7,9 @@ import {
 } from "@phosphor-icons/react";
 import { type CSSProperties, useRef, useState } from "react";
 
+import { ManagerSwitch } from "./manager-switch";
 import { usePlayOnce } from "./play-once";
+import { run, useManager } from "./pm";
 import { QR_PATH, QR_SIZE } from "./qr";
 
 import "./install.css";
@@ -38,7 +40,7 @@ function CopyCode({ code }: { code: string }) {
 const at = (seconds: number) => ({ "--d": `${seconds}s` }) as CSSProperties;
 
 /** What `npx kiteline --relay` prints, in the banner's own colors, cropped below the pairing link. */
-function Terminal() {
+function Terminal({ command }: { command: string }) {
 	const ref = useRef<HTMLDivElement>(null);
 	const motion = usePlayOnce(ref);
 	return (
@@ -53,7 +55,7 @@ function Terminal() {
 			<div
 				className="term"
 				role="img"
-				aria-label="The terminal after npx kiteline --relay: Kiteline's addresses and a QR code to pair your phone"
+				aria-label={`The terminal after ${command}: Kiteline's addresses and a QR code to pair your phone`}
 			>
 				<div className="term__bar">
 					<span className="term__lights">
@@ -61,19 +63,21 @@ function Terminal() {
 						<i />
 						<i />
 					</span>
-					<span className="term__title">npx kiteline --relay</span>
+					<span className="term__title">{command}</span>
 				</div>
 				<div className="term__body">
 					<div className="term__line">
 						<span className="t-dim">~</span> <span className="t-accent">❯</span>{" "}
-						<span className="term__typed">npx kiteline --relay</span>
+						<span className="term__typed" style={{ "--chars": command.length } as CSSProperties}>
+							{command}
+						</span>
 					</div>
 					<div className="term__gap" />
 					<div className="term__line out" style={at(0.95)}>
 						{"  "}
 						<span className="t-accent">◆</span>
 						{"  "}
-						<b>Kiteline</b> <span className="t-dim">v0.3.1</span>
+						<b>Kiteline</b> <span className="t-dim">v0.3.2</span>
 					</div>
 					<div className="term__gap" />
 					<div className="term__line out" style={at(1.05)}>
@@ -112,6 +116,7 @@ function Terminal() {
 }
 
 export function Install() {
+	const [manager] = useManager();
 	return (
 		<section className="setup" id="install">
 			<h2 className="statement">
@@ -125,7 +130,8 @@ export function Install() {
 						<span className="setup-step__n">1</span>
 						<div className="setup-step__body">
 							<h3>Run it on the computer where you use Claude Code</h3>
-							<CopyCode code="npx kiteline --relay" />
+							<ManagerSwitch className="pm-switch" />
+							<CopyCode code={run(manager, "kiteline --relay")} />
 						</div>
 					</li>
 					<li className="setup-step">
@@ -134,12 +140,12 @@ export function Install() {
 							<h3>Scan the code, then allow your phone</h3>
 							<p>
 								Check that your phone and the terminal show the same six digits, and type y. To pair another
-								device later, run <code>npx kiteline pair</code>.
+								device later, run <code>{run(manager, "kiteline pair")}</code>.
 							</p>
 						</div>
 					</li>
 				</ol>
-				<Terminal />
+				<Terminal command={run(manager, "kiteline --relay")} />
 			</div>
 
 			<div className="setup__next">

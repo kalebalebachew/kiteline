@@ -9,6 +9,9 @@ import {
 } from "@phosphor-icons/react";
 import { type ReactNode, useId, useState } from "react";
 
+import { ManagerSwitch } from "../manager-switch";
+import { everyManager, type Manager, useManager } from "../pm";
+
 /** A heading's anchor: shows on hover, and a click copies the section's link. */
 function Anchor({ id }: { id: string }) {
 	const [copied, setCopied] = useState(false);
@@ -97,17 +100,31 @@ export function Callout({ tone = "note", children }: { tone?: keyof typeof TONES
  * A code block with a label and a copy button. Lines starting with "#" are comments, shown dimmed
  * and left out of what's copied, as is any trailing "# comment".
  */
-export function Code({ code, label = "Terminal" }: { code: string; label?: string }) {
+/**
+ * A block of commands to copy. With `pm`, the commands come in npm, pnpm and bun, switched by tabs in
+ * its caption; the choice holds for every block on the site.
+ */
+export function Code({
+	code: fixed = "",
+	label = "Terminal",
+	pm,
+}: {
+	code?: string;
+	label?: string;
+	pm?: (manager: Manager) => string;
+}) {
 	const [copied, setCopied] = useState(false);
+	const [manager] = useManager();
+	const code = pm ? pm(manager) : fixed;
 	const runnable = code
 		.split("\n")
 		.filter((line) => !line.trimStart().startsWith("#"))
 		.map((line) => line.replace(/\s+#\s.*$/, ""))
 		.join("\n");
 	return (
-		<figure className="doc-code" data-code={code} data-label={label}>
+		<figure className="doc-code" data-code={pm ? everyManager(pm) : code} data-label={label}>
 			<figcaption>
-				<span>{label}</span>
+				{pm ? <ManagerSwitch className="doc-code__pm" /> : <span>{label}</span>}
 				<button
 					type="button"
 					aria-label={copied ? "Copied" : "Copy"}

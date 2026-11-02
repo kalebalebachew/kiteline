@@ -79,6 +79,34 @@
 	font-size: 13.5px;
 	white-space: nowrap;
 }
+/* npm, pnpm or bun: the commands follow. */
+.pm-switch {
+	display: flex;
+	gap: 4px;
+	margin-top: 12px;
+}
+.pm-switch button {
+	height: 28px;
+	padding: 0 11px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--muted);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		background-color 0.15s,
+		color 0.15s;
+}
+.pm-switch button:hover {
+	color: var(--ink);
+}
+.pm-switch button[aria-selected="true"] {
+	background: var(--ink);
+	color: #fff;
+}
 .snippet {
 	display: flex;
 	align-items: flex-start;
@@ -122,6 +150,9 @@
 .snippet__copy svg {
 	width: 15px;
 	height: 15px;
+}
+.pm-switch + .snippet {
+	margin-top: 8px;
 }
 
 /* The terminal, on the sky. */
@@ -226,7 +257,7 @@
 		max-width: 0;
 	}
 	to {
-		max-width: 20ch;
+		max-width: calc(var(--chars, 20) * 1ch);
 	}
 }
 @keyframes setup-in {
@@ -241,7 +272,7 @@
 	opacity: 0;
 }
 [data-motion="play"] .term__typed {
-	animation: setup-type 0.8s steps(20, end) 0.2s both;
+	animation: setup-type 0.8s steps(var(--chars, 20), end) 0.2s both;
 }
 [data-motion="play"] .out {
 	animation: setup-in 0.12s linear var(--d, 0s) both;

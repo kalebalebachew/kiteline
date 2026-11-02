@@ -1,3 +1,4 @@
+import { install, run } from "../pm";
 import { Callout, Code, Details, Figure, H3, Kbd, Section, Step, Steps, Table, Tabs } from "./parts";
 import { BannerShot, HowItWorks, ModeList, SheetMock } from "./visuals";
 
@@ -43,7 +44,8 @@ export function Content() {
 						<code>claude</code> in a terminal once and sign in.
 					</li>
 					<li>
-						<strong>Node.js 22.18 or newer.</strong> Check with <code>node --version</code>, and get it from{" "}
+						<strong>Node.js 22.18 or newer,</strong> also when you install with pnpm or bun: Kiteline runs on
+						Node either way. Check with <code>node --version</code>, and get it from{" "}
 						<a href="https://nodejs.org">nodejs.org</a> if you need to.
 					</li>
 					<li>
@@ -58,7 +60,7 @@ export function Content() {
 			</Section>
 
 			<Section id="install" title="Install" lead="One command, on the computer that runs Claude Code.">
-				<Code code="npx kiteline --relay" />
+				<Code pm={(m) => run(m, "kiteline --relay")} />
 				<p>
 					It starts Kiteline and, the first time, shows a QR code to pair your phone. Leave it running while
 					you use Kiteline. With <code>--relay</code>, your phone reaches it from anywhere, sealed end to end
@@ -67,10 +69,14 @@ export function Content() {
 				</p>
 				<H3 id="install-for-good">Install it for good</H3>
 				<p>
-					npx keeps its copy only until it tidies up. To have the <code>kiteline</code> command whenever you
-					want it, install it:
+					npx, pnpm dlx and bunx keep their copy only until they tidy up. To have the <code>kiteline</code>{" "}
+					command whenever you want it, install it:
 				</p>
-				<Code code={"npm install -g kiteline\nkiteline"} />
+				<Code pm={(m) => `${install(m)}\nkiteline`} />
+				<p>
+					With pnpm, run <code>pnpm setup</code> once if it says its folder for commands isn't on your PATH;
+					with bun, that folder is <code>~/.bun/bin</code>.
+				</p>
 				<Callout tone="tip">
 					Want it to start by itself and keep going after you close the terminal? That's one more command:{" "}
 					<a href="#always-on">Keep it running</a>.
@@ -104,9 +110,10 @@ export function Content() {
 					</Step>
 					<Step title="Pair another device later">
 						<p>
-							Run <code>kiteline pair</code> (or <code>npx kiteline pair</code>) while Kiteline runs: it makes
-							a fresh code and asks you about the device that uses it. On a device that's already paired,
-							Settings → "Pair a new device" does the same, and you allow the new one right there.
+							Run <code>kiteline pair</code> while Kiteline runs (or <code>npx kiteline pair</code>, with pnpm
+							dlx or bunx the same way, if you didn't install it): it makes a fresh code and asks you about
+							the device that uses it. On a device that's already paired, Settings → "Pair a new device" does
+							the same, and you allow the new one right there.
 						</p>
 					</Step>
 				</Steps>
@@ -469,7 +476,7 @@ export function Content() {
 				title="Reach it from anywhere"
 				lead="Start Kiteline with --relay, and your phone reaches it on any network: at home, at work, on mobile data."
 			>
-				<Code code="npx kiteline --relay" />
+				<Code pm={(m) => run(m, "kiteline --relay")} />
 				<p>
 					The pairing code then opens Kiteline through its relay at <code>relay.kiteline.seefun.dev</code>,
 					wherever your phone is. Nothing to install on the phone, no account, no ports to open. Pair once, as
@@ -514,7 +521,9 @@ export function Content() {
 					</Step>
 					<Step title="Point the pairing code at it">
 						<p>Tell Kiteline its new address, so the QR code opens it. Start it with:</p>
-						<Code code={"npx kiteline \\\n  --public-url https://your-computer.your-network.ts.net"} />
+						<Code
+							pm={(m) => `${run(m, "kiteline")} \\\n  --public-url https://your-computer.your-network.ts.net`}
+						/>
 						<p>
 							Running it in the background? Give the same option to{" "}
 							<a href="#always-on">kiteline service install</a> instead.
@@ -543,8 +552,8 @@ export function Content() {
 			>
 				<Steps>
 					<Step title="Install it">
-						<p>The service needs a copy of Kiteline that stays put, so not npx's:</p>
-						<Code code="npm install -g kiteline" />
+						<p>The service needs a copy of Kiteline that stays put, so not one from npx, pnpm dlx or bunx:</p>
+						<Code pm={(m) => install(m)} />
 					</Step>
 					<Step title="Set up the service">
 						<Code code="kiteline service install --relay" />
@@ -594,13 +603,14 @@ export function Content() {
 
 			<Section id="update" title="Update" lead="Install the latest version, then restart.">
 				<Code
-					code={
-						"npm install -g kiteline@latest\nsystemctl --user restart kiteline   # if it runs in the background"
+					pm={(m) =>
+						`${install(m, "kiteline@latest")}\nsystemctl --user restart kiteline   # if it runs in the background`
 					}
 				/>
 				<p>
-					With npx, <code>npx kiteline@latest</code> runs the newest. Restarting stops running sessions; each
-					one continues when you send it a message. Your phone picks up the new version by itself.
+					Without installing, <code>npx kiteline@latest</code> runs the newest, and so do pnpm dlx and bunx.
+					Restarting stops running sessions; each one continues when you send it a message. Your phone picks
+					up the new version by itself.
 				</p>
 			</Section>
 
@@ -791,8 +801,8 @@ export function Content() {
 				</Details>
 				<Details id="older-link" summary="“That link is from an older Kiteline”">
 					<p>
-						The computer runs Kiteline 0.2 or older, which paired differently. Update it with{" "}
-						<code>npm install -g kiteline@latest</code>, restart it, then run <code>kiteline pair</code>.
+						The computer runs Kiteline 0.2 or older, which paired differently. <a href="#update">Update it</a>
+						, restart it, then run <code>kiteline pair</code>.
 					</p>
 				</Details>
 				<Details id="too-many" summary="“Too many wrong codes”">
@@ -818,18 +828,21 @@ export function Content() {
 						(or run <code>/login</code>), then send your message again.
 					</p>
 				</Details>
-				<Details id="install-fails" summary="npx kiteline or npm install fails">
+				<Details id="install-fails" summary="Installing or starting Kiteline fails">
 					<p>
-						Check <code>node --version</code>: Kiteline needs Node.js 22.18 or newer. Update Node, then try
-						again. The first install also downloads Claude Code's engine, about 150 MB, so a slow or dropped
-						connection can stop it part way; running it again picks up where it left off.
+						Check <code>node --version</code>: Kiteline needs Node.js 22.18 or newer, also with pnpm or bun,
+						which run it on Node. Update Node, then try again. The first install also downloads Claude Code's
+						engine, about 150 MB, so a slow or dropped connection can stop it part way; running it again picks
+						up where it left off.
 					</p>
 				</Details>
 				<Details id="not-found" summary="“kiteline: command not found”">
 					<p>
-						It isn't installed yet, or npm's folder for commands isn't on your PATH. Run it with{" "}
-						<code>npx kiteline</code>, or install it with <code>npm install -g kiteline</code> and open a new
-						terminal.
+						It isn't installed yet, or your package manager's folder for commands isn't on your PATH. Install
+						it (<a href="#install-for-good">how</a>) and open a new terminal: with pnpm, run{" "}
+						<code>pnpm setup</code> once; with bun, add <code>~/.bun/bin</code> to your PATH. Or run it
+						without installing: <code>npx kiteline</code>, <code>pnpm dlx kiteline</code> or{" "}
+						<code>bunx kiteline</code>.
 					</p>
 				</Details>
 				<Details id="pair-not-run" summary="kiteline pair says Kiteline isn't running">

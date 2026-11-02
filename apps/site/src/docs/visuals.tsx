@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { KiteMark } from "../mark";
+import { run, useManager } from "../pm";
 import { QR_PATH, QR_SIZE } from "../qr";
 
 /** Phone, your own network, then everything else on one computer. */
@@ -61,8 +62,10 @@ export function HowItWorks() {
 	);
 }
 
-/** What `npx kiteline --relay` prints, in the banner's colours. */
+/** What `npx kiteline --relay` prints, in the banner's colours, run the way you picked. */
 export function BannerShot() {
+	const [manager] = useManager();
+	const command = run(manager, "kiteline --relay");
 	return (
 		<div className="banner-shot">
 			<div className="banner-shot__bar">
@@ -71,18 +74,18 @@ export function BannerShot() {
 					<i />
 					<i />
 				</span>
-				<span>npx kiteline --relay</span>
+				<span>{command}</span>
 			</div>
 			<div className="banner-shot__body">
 				<div>
-					<span className="t-dim">~</span> <span className="t-accent">❯</span> npx kiteline --relay
+					<span className="t-dim">~</span> <span className="t-accent">❯</span> {command}
 				</div>
 				<div className="banner-shot__gap" />
 				<div>
 					{"  "}
 					<span className="t-accent">◆</span>
 					{"  "}
-					<b>Kiteline</b> <span className="t-dim">v0.3.1</span>
+					<b>Kiteline</b> <span className="t-dim">v0.3.2</span>
 				</div>
 				<div className="banner-shot__gap" />
 				<div>
